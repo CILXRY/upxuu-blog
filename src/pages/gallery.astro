@@ -58,8 +58,8 @@ const jsonLd = {
 		<!-- 月份筛选 -->
 		<div class="month-bar flex flex-wrap justify-center gap-2 mb-6" id="monthButtons"></div>
 
-		<!-- 画廊网格 -->
-		<div class="gallery grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4" id="gallery">
+		<!-- 画廊网格 - 使用瀑布流布局 -->
+		<div class="gallery columns-2 md:columns-3 lg:columns-4 gap-3 md:gap-4 space-y-3 md:space-y-4" id="gallery">
 			<div class="loading-spinner col-span-full flex justify-center items-center py-20">
 				<div class="relative">
 					<div class="w-12 h-12 border-4 border-gray-200 dark:border-gray-700 rounded-full animate-spin border-t-blue-500"></div>
@@ -201,9 +201,10 @@ const jsonLd = {
 
 			const results = await Promise.all(promises);
 			
-			// 过滤出有数据的月份
+			// 过滤出有数据的月份，并按时间从新到旧排序
 			allMonths = results
 				.filter(r => r.hasData)
+				.sort((a, b) => b.month.localeCompare(a.month)) // 从新到旧排序
 				.map(r => ({
 					month: r.month,
 					count: r.data.length,
@@ -261,14 +262,24 @@ const jsonLd = {
 		try {
 			// 如果已经加载过这个月，直接使用缓存
 			if (loadedMonths[monthStr]) {
-				currentImages = loadedMonths[monthStr];
+				// 按时间从新到旧排序
+				currentImages = [...loadedMonths[monthStr]].sort((a, b) => {
+					const dateA = new Date(b.upload_date || b.created_at);
+					const dateB = new Date(b.upload_date || b.created_at);
+					return dateA - dateB;
+				});
 				currentImageIndex = 0;
 				renderGallery(currentImages);
 			} else {
 				// 加载新月份
 				const data = await fetchJSON(`${API_BASE}/${monthStr}`);
-				loadedMonths[monthStr] = data;
-				currentImages = data;
+				// 按时间从新到旧排序
+				loadedMonths[monthStr] = data.sort((a, b) => {
+					const dateA = new Date(b.upload_date || b.created_at);
+					const dateB = new Date(b.upload_date || b.created_at);
+					return dateA - dateB;
+				});
+				currentImages = loadedMonths[monthStr];
 				currentImageIndex = 0;
 				renderGallery(currentImages);
 			}
@@ -298,17 +309,17 @@ const jsonLd = {
 		
 		images.forEach((image, index) => {
 			const item = document.createElement('div');
-			item.className = 'gallery-item group relative bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105';
+			item.className = 'gallery-item group relative bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105 break-inside-avoid mb-3 md:mb-4';
 			item.onclick = () => openLightbox(index);
 
 			item.innerHTML = `
-				<div class="aspect-square overflow-hidden bg-gray-100 dark:bg-gray-700">
+				<div class="overflow-hidden bg-gray-100 dark:bg-gray-700">
 					<img 
 						src="${image.url}" 
 						alt="${image.name}" 
 						loading="lazy"
-						class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-						onerror="this.parentElement.parentElement.innerHTML='<div class=\\'aspect-square flex items-center justify-center bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-500\\'><span class=\\'text-4xl\\'>🖼️</span></div>'"
+						class="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-110"
+						onerror="this.parentElement.parentElement.innerHTML='<div class=\\'w-full h-48 flex items-center justify-center bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-500\\'><span class=\\'text-4xl\\'>🖼️</span></div>'"
 					>
 				</div>
 				<div class="gallery-item-info absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
