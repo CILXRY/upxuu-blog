@@ -55,9 +55,26 @@ export const navBarConfig: NavBarConfig = {
 		LinkPreset.Home,
 		LinkPreset.Archive,
 		{
-			name: "画廊",
-			url: "/gallery",
+			name: "更多",
+			url: "#",
 			external: false,
+			children: [
+				{
+					name: "画廊",
+					url: "/gallery",
+					external: false,
+				},
+				{
+					name: "状态",
+					url: "https://up.upxuu.com/",
+					external: true,
+				},
+				{
+					name: "统计",
+					url: "https://stats.upxuu.com/share/sFftlqBkgk2z9JM2",
+					external: true,
+				},
+			],
 		},
 		{
 			name: "友链",
