@@ -33,16 +33,6 @@ const jsonLd = {
 			</p>
 		</div>
 
-		<!-- 刷新提示 -->
-		<div id="refresh-notice" class="hidden mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl text-center">
-			<p class="text-blue-700 dark:text-blue-300 mb-3">
-				👋 画廊需要刷新页面才能加载
-			</p>
-			<button onclick="window.location.reload()" class="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors">
-				🔄 刷新页面
-			</button>
-		</div>
-
 		<!-- 统计信息 -->
 		<div class="flex justify-center gap-6 mb-6 text-sm text-gray-600 dark:text-gray-400">
 			<div class="flex items-center gap-2">
@@ -165,12 +155,6 @@ const jsonLd = {
 		document.getElementById('error-text').textContent = message;
 	}
 
-	function showRefreshNotice() {
-		document.getElementById('refresh-notice').classList.remove('hidden');
-		document.getElementById('gallery').innerHTML = '';
-		document.getElementById('monthButtons').innerHTML = '';
-	}
-
 	async function loadRootIndex() {
 		if (isLoaded) return;
 		
@@ -191,7 +175,7 @@ const jsonLd = {
 			}
 		} catch (error) {
 			console.error('Gallery load error:', error);
-			showRefreshNotice();
+			showError(error.message);
 		}
 	}
 
@@ -366,9 +350,9 @@ const jsonLd = {
 		}
 	});
 
-	// 初始化：总是显示刷新按钮，让用户手动点击
+	// 初始化：直接加载画廊
 	function initGallery() {
-		showRefreshNotice();
+		loadRootIndex();
 	}
 
 	// 页面加载完成后初始化
