@@ -346,8 +346,9 @@ const jsonLd = {
 	document.getElementById('lightboxPrev').addEventListener('click', () => navigateImage(-1));
 	document.getElementById('lightboxNext').addEventListener('click', () => navigateImage(1));
 
-	// 点击背景关闭
+	// 点击背景关闭 - 只有点击 lightbox 本身或图片容器时才关闭
 	document.getElementById('lightbox').addEventListener('click', (e) => {
+		// 如果点击的是 lightbox 本身（黑色背景）或者图片容器
 		if (e.target.id === 'lightbox' || e.target.classList.contains('relative')) {
 			closeLightbox();
 		}
