@@ -4,9 +4,8 @@ published: 2026-04-06
 description: '清明假期随笔，清明最后一天了，更新点东西'
 image: ''
 tags: [日常，随笔]
-category: 生活
+category: 随笔
 draft: false 
-
 ---
 
 清明时节，春意正浓。
@@ -39,6 +38,16 @@ https://stats.upxuu.com/share/sFftlqBkgk2z9JM2
 
 ## 一个相册
 
+[画廊 - UpXuu's blog](https://myblog-inky-mu.vercel.app/gallery)
+
 是的我做了一个基于GitHub的图床相册，全部使用我自己的GitHub反代 不过还有一些缓存问题没修好 至少能用嘿嘿
 
 以及使用GitHub action构建索引json
+
+![image-20260406200541187](https://edit.upxuu.com/img/2026/04/06/1775477141878_612.png)
+
+![image-20260406195343109](https://edit.upxuu.com/img/2026/04/06/1775476423438_76.png)
+
+👆实在没办法 用的trae
+
+下次大更新可能就是7月了，以后可能只有时间更一些日常 bye~
