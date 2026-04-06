@@ -262,22 +262,22 @@ const jsonLd = {
 		try {
 			// 如果已经加载过这个月，直接使用缓存
 			if (loadedMonths[monthStr]) {
-				// 按时间从新到旧排序
+				// 按时间从新到旧排序（优先使用 created_at，包含具体时间）
 				currentImages = [...loadedMonths[monthStr]].sort((a, b) => {
-					const dateA = new Date(b.upload_date || b.created_at);
-					const dateB = new Date(b.upload_date || b.created_at);
-					return dateA - dateB;
+					const dateA = new Date(b.created_at || b.upload_date);
+					const dateB = new Date(b.created_at || b.upload_date);
+					return dateA.getTime() - dateB.getTime();
 				});
 				currentImageIndex = 0;
 				renderGallery(currentImages);
 			} else {
 				// 加载新月份
 				const data = await fetchJSON(`${API_BASE}/${monthStr}`);
-				// 按时间从新到旧排序
+				// 按时间从新到旧排序（优先使用 created_at，包含具体时间）
 				loadedMonths[monthStr] = data.sort((a, b) => {
-					const dateA = new Date(b.upload_date || b.created_at);
-					const dateB = new Date(b.upload_date || b.created_at);
-					return dateA - dateB;
+					const dateA = new Date(b.created_at || b.upload_date);
+					const dateB = new Date(b.created_at || b.upload_date);
+					return dateA.getTime() - dateB.getTime();
 				});
 				currentImages = loadedMonths[monthStr];
 				currentImageIndex = 0;
