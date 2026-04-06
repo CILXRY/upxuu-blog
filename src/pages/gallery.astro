@@ -337,7 +337,26 @@ const jsonLd = {
 		}
 	});
 
-	window.addEventListener('load', loadRootIndex);
+	// 初始化加载
+	function initGallery() {
+		// 清理之前的状态
+		allMonths = [];
+		currentImages = [];
+		currentImageIndex = 0;
+		loadRootIndex();
+	}
+
+	// 监听页面加载和 Swup 页面切换
+	if (document.readyState === 'complete') {
+		initGallery();
+	} else {
+		window.addEventListener('load', initGallery);
+	}
+
+	// 监听 Swup 页面切换事件
+	document.addEventListener('swup:page:view', () => {
+		initGallery();
+	});
 </script>
 
 <style>
