@@ -2,6 +2,8 @@
 import MainGridLayout from "../layouts/MainGridLayout.astro";
 import BannerTitle from "../components/BannerTitle.astro";
 import { profileConfig, siteConfig } from "../config";
+import PhotoSwipeLightbox from "photoswipe/lightbox";
+import PhotoSwipe from "photoswipe";
 
 const jsonLd = {
 	"@context": "https://schema.org",
@@ -345,7 +347,7 @@ const jsonLd = {
 
 	function openLightbox(index) {
 		// 使用 PhotoSwipe 打开灯箱
-		const items = currentImages.map((image, i) => ({
+		const items = currentImages.map((image) => ({
 			src: image.url,
 			w: image.width || 1920,
 			h: image.height || 1080,
