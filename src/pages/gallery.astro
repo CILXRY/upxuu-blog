@@ -77,34 +77,39 @@ const jsonLd = {
 	</div>
 </MainGridLayout>
 
-<!-- 灯箱 - 移到 MainGridLayout 外面以覆盖整个页面 -->
-<div id="lightbox" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-[9999] hidden">
-	<button id="lightboxClose" class="absolute top-4 right-4 text-white text-4xl hover:text-gray-300 transition-colors z-10 p-2">×</button>
+<!-- 灯箱 - 使用 PhotoSwipe -->
+<div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+	<div class="pswp__bg"></div>
 	
-	<button id="lightboxPrev" class="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 text-white text-2xl md:text-3xl hover:text-gray-300 transition-colors bg-black/30 hover:bg-black/50 rounded-full p-2 md:p-3">
-		<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 md:h-8 md:w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-		</svg>
-	</button>
-	
-	<button id="lightboxNext" class="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 text-white text-2xl md:text-3xl hover:text-gray-300 transition-colors bg-black/30 hover:bg-black/50 rounded-full p-2 md:p-3">
-		<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 md:h-8 md:w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-		</svg>
-	</button>
-
-	<div class="absolute inset-0 flex items-center justify-center p-4 md:p-8">
-		<div class="relative max-w-full max-h-full">
-			<img id="lightboxImg" src="" alt="" class="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl">
-			<div id="lightboxLoader" class="absolute inset-0 flex items-center justify-center">
-				<div class="w-12 h-12 border-4 border-gray-600 border-t-white rounded-full animate-spin"></div>
+	<div class="pswp__scroll-wrap">
+		<div class="pswp__container">
+			<div class="pswp__item"></div>
+			<div class="pswp__item"></div>
+			<div class="pswp__item"></div>
+		</div>
+		
+		<div class="pswp__ui pswp__ui--hidden">
+			<div class="pswp__top-bar">
+				<div class="pswp__counter"></div>
+				<button class="pswp__button pswp__button--close" title="关闭 (Esc)"></button>
+				<button class="pswp__button pswp__button--zoom" title="缩放"></button>
+				<div class="pswp__preloader">
+					<div class="pswp__preloader__icn">
+						<div class="pswp__preloader__cut">
+							<div class="pswp__preloader__donut"></div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+				<div class="pswp__share-tooltip"></div>
+			</div>
+			<button class="pswp__button pswp__button--arrow--left" title="上一张"></button>
+			<button class="pswp__button pswp__button--arrow--right" title="下一张"></button>
+			<div class="pswp__caption">
+				<div class="pswp__caption__center"></div>
 			</div>
 		</div>
-	</div>
-
-	<div class="absolute bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 text-center text-white bg-black/60 backdrop-blur-sm px-4 md:px-6 py-2 md:py-3 rounded-lg max-w-[90%] md:max-w-none">
-		<h3 id="lightbox-name" class="text-sm md:text-base font-semibold mb-1"></h3>
-		<p id="lightbox-meta" class="text-xs md:text-sm text-gray-300"></p>
 	</div>
 </div>
 
@@ -339,87 +344,46 @@ const jsonLd = {
 	}
 
 	function openLightbox(index) {
-		const lightbox = document.getElementById('lightbox');
-		const lightboxImg = document.getElementById('lightboxImg');
-		const loader = document.getElementById('lightboxLoader');
-		const nameEl = document.getElementById('lightbox-name');
-		const metaEl = document.getElementById('lightbox-meta');
+		// 使用 PhotoSwipe 打开灯箱
+		const items = currentImages.map((image, i) => ({
+			src: image.url,
+			w: image.width || 1920,
+			h: image.height || 1080,
+			title: `${image.name}<br><small>${formatDate(image.upload_date || image.created_at)} · ${formatFileSize(image.size)}</small>`
+		}));
 
-		currentImageIndex = index;
-		const image = currentImages[index];
-
-		nameEl.textContent = image.name;
-		metaEl.textContent = `${formatDate(image.upload_date || image.created_at)} · ${formatFileSize(image.size)}`;
-		
-		loader.classList.remove('hidden');
-		lightboxImg.style.opacity = '0';
-		
-		const tempImg = new Image();
-		tempImg.src = image.url;
-		tempImg.onload = () => {
-			lightboxImg.src = image.url;
-			lightboxImg.style.opacity = '1';
-			loader.classList.add('hidden');
+		const pswpElement = document.querySelector('.pswp');
+		const options = {
+			index: index,
+			history: false,
+			focus: true,
+			showHideOpacity: true,
+			getThumbBoundsFn: (index) => {
+				const thumbnail = document.querySelectorAll('.gallery-item img')[index];
+				if (!thumbnail) return undefined;
+				const pageYScroll = window.pageYOffset || document.documentElement.scrollTop;
+				const rect = thumbnail.getBoundingClientRect();
+				return { x: rect.left, y: rect.top + pageYScroll, w: rect.width };
+			}
 		};
 
-		lightbox.classList.remove('hidden');
-		lightbox.classList.add('flex');
-		document.body.style.overflow = 'hidden';
-
-		updateNavButtons();
+		const gallery = new PhotoSwipe(pswpElement, PhotoSwipeLightbox, items, options);
+		gallery.init();
 	}
 
 	function closeLightbox() {
-		const lightbox = document.getElementById('lightbox');
-		lightbox.classList.remove('flex');
-		lightbox.classList.add('hidden');
-		document.body.style.overflow = '';
+		// PhotoSwipe 会自动处理关闭
 	}
 
 	function navigateImage(direction) {
-		let newIndex = currentImageIndex + direction;
-		if (newIndex < 0) newIndex = currentImages.length - 1;
-		if (newIndex >= currentImages.length) newIndex = 0;
-		openLightbox(newIndex);
+		// PhotoSwipe 会自动处理导航
 	}
 
 	function updateNavButtons() {
-		const prevBtn = document.getElementById('lightboxPrev');
-		const nextBtn = document.getElementById('lightboxNext');
-		if (currentImages.length <= 1) {
-			prevBtn.classList.add('hidden');
-			nextBtn.classList.add('hidden');
-		} else {
-			prevBtn.classList.remove('hidden');
-			nextBtn.classList.remove('hidden');
-		}
+		// PhotoSwipe 会自动处理导航按钮
 	}
 
-	// 绑定灯箱按钮事件
-	document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
-	document.getElementById('lightboxPrev').addEventListener('click', () => navigateImage(-1));
-	document.getElementById('lightboxNext').addEventListener('click', () => navigateImage(1));
-
-	// 点击背景关闭 - 只有点击 lightbox 本身或图片容器时才关闭
-	document.getElementById('lightbox').addEventListener('click', (e) => {
-		// 如果点击的是 lightbox 本身（黑色背景）或者图片容器
-		if (e.target.id === 'lightbox' || e.target.classList.contains('relative')) {
-			closeLightbox();
-		}
-	});
-
-	document.addEventListener('keydown', (e) => {
-		const lightbox = document.getElementById('lightbox');
-		if (!lightbox.classList.contains('hidden')) {
-			if (e.key === 'Escape') {
-				closeLightbox();
-			} else if (e.key === 'ArrowLeft') {
-				navigateImage(-1);
-			} else if (e.key === 'ArrowRight') {
-				navigateImage(1);
-			}
-		}
-	});
+	// PhotoSwipe 会自动处理所有事件，不需要手动绑定
 
 	// 页面加载完成后初始化
 	if (document.readyState === 'complete') {
