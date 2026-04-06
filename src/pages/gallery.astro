@@ -78,35 +78,35 @@ const jsonLd = {
 </MainGridLayout>
 
 <!-- 灯箱 - 移到 MainGridLayout 外面以覆盖整个页面 -->
-<div id="lightbox" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-[9999] hidden">
-	<button onclick="closeLightbox()" class="absolute top-4 right-4 text-white text-4xl hover:text-gray-300 transition-colors z-10 p-2">×</button>
-	
-	<button onclick="navigateImage(-1)" class="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 text-white text-2xl md:text-3xl hover:text-gray-300 transition-colors bg-black/30 hover:bg-black/50 rounded-full p-2 md:p-3">
-		<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 md:h-8 md:w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-		</svg>
-	</button>
-	
-	<button onclick="navigateImage(1)" class="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 text-white text-2xl md:text-3xl hover:text-gray-300 transition-colors bg-black/30 hover:bg-black/50 rounded-full p-2 md:p-3">
-		<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 md:h-8 md:w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-		</svg>
-	</button>
+	<div id="lightbox" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-[9999] hidden">
+		<button id="lightbox-close" class="absolute top-4 right-4 text-white text-4xl hover:text-gray-300 transition-colors z-10 p-2">×</button>
+		
+		<button id="lightbox-prev" class="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 text-white text-2xl md:text-3xl hover:text-gray-300 transition-colors bg-black/30 hover:bg-black/50 rounded-full p-2 md:p-3">
+			<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 md:h-8 md:w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+			</svg>
+		</button>
+		
+		<button id="lightbox-next" class="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 text-white text-2xl md:text-3xl hover:text-gray-300 transition-colors bg-black/30 hover:bg-black/50 rounded-full p-2 md:p-3">
+			<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 md:h-8 md:w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+			</svg>
+		</button>
 
-	<div class="absolute inset-0 flex items-center justify-center p-4 md:p-8">
-		<div class="relative max-w-full max-h-full">
-			<img id="lightboxImg" src="" alt="" class="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl">
-			<div id="lightboxLoader" class="absolute inset-0 flex items-center justify-center">
-				<div class="w-12 h-12 border-4 border-gray-600 border-t-white rounded-full animate-spin"></div>
+		<div class="absolute inset-0 flex items-center justify-center p-4 md:p-8">
+			<div class="relative max-w-full max-h-full">
+				<img id="lightboxImg" src="" alt="" class="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl">
+				<div id="lightboxLoader" class="absolute inset-0 flex items-center justify-center">
+					<div class="w-12 h-12 border-4 border-gray-600 border-t-white rounded-full animate-spin"></div>
+				</div>
 			</div>
 		</div>
-	</div>
 
-	<div class="absolute bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 text-center text-white bg-black/60 backdrop-blur-sm px-4 md:px-6 py-2 md:py-3 rounded-lg max-w-[90%] md:max-w-none">
-		<h3 id="lightbox-name" class="text-sm md:text-base font-semibold mb-1"></h3>
-		<p id="lightbox-meta" class="text-xs md:text-sm text-gray-300"></p>
+		<div class="absolute bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 text-center text-white bg-black/60 backdrop-blur-sm px-4 md:px-6 py-2 md:py-3 rounded-lg max-w-[90%] md:max-w-none">
+			<h3 id="lightbox-name" class="text-sm md:text-base font-semibold mb-1"></h3>
+			<p id="lightbox-meta" class="text-xs md:text-sm text-gray-300"></p>
+		</div>
 	</div>
-</div>
 
 <script>
 	const BASE_URL = 'https://edit.upxuu.com/img';
@@ -330,8 +330,8 @@ const jsonLd = {
 	}
 
 	function updateNavButtons() {
-		const prevBtn = document.querySelector('button[onclick="navigateImage(-1)"]');
-		const nextBtn = document.querySelector('button[onclick="navigateImage(1)"]');
+		const prevBtn = document.getElementById('lightbox-prev');
+		const nextBtn = document.getElementById('lightbox-next');
 		if (currentImages.length <= 1) {
 			prevBtn.classList.add('hidden');
 			nextBtn.classList.add('hidden');
@@ -341,8 +341,14 @@ const jsonLd = {
 		}
 	}
 
+	// 绑定灯箱按钮事件
+	document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
+	document.getElementById('lightbox-prev').addEventListener('click', () => navigateImage(-1));
+	document.getElementById('lightbox-next').addEventListener('click', () => navigateImage(1));
+
+	// 灯箱背景点击关闭
 	document.getElementById('lightbox').addEventListener('click', (e) => {
-		if (e.target.id === 'lightbox' || e.target.closest('#lightbox') === e.target.closest('.absolute')) {
+		if (e.target.id === 'lightbox') {
 			closeLightbox();
 		}
 	});
@@ -360,18 +366,9 @@ const jsonLd = {
 		}
 	});
 
-	// 初始化：检测是否需要显示刷新提示
+	// 初始化：总是显示刷新按钮，让用户手动点击
 	function initGallery() {
-		// 如果是通过 Swup 跳转过来的，显示刷新提示
-		const isSwupNavigation = window.performance && window.performance.navigation && window.performance.navigation.type === 0;
-		
-		if (!isSwupNavigation || document.referrer.includes(window.location.hostname)) {
-			// 直接访问或从外部链接进入，尝试加载
-			loadRootIndex();
-		} else {
-			// 站内跳转，显示刷新提示
-			showRefreshNotice();
-		}
+		showRefreshNotice();
 	}
 
 	// 页面加载完成后初始化
