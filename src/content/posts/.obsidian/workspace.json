@@ -19,52 +19,7 @@
               },
               "icon": "lucide-file",
               "title": "2025.9.27-国庆文艺汇演"
-            },
-            "group": "af4c5e0341a6c0da"
-          }
-        ]
-      },
-      {
-        "id": "a94d6a2ae60b3d17",
-        "type": "tabs",
-        "children": [
-          {
-            "id": "230361c2f74d0b3a",
-            "type": "leaf",
-            "state": {
-              "type": "localgraph",
-              "state": {
-                "file": "2025.9.27-国庆文艺汇演.md",
-                "options": {
-                  "collapse-filter": true,
-                  "search": "",
-                  "localJumps": 1,
-                  "localBacklinks": true,
-                  "localForelinks": true,
-                  "localInterlinks": false,
-                  "showTags": false,
-                  "showAttachments": false,
-                  "hideUnresolved": false,
-                  "collapse-color-groups": true,
-                  "colorGroups": [],
-                  "collapse-display": true,
-                  "showArrow": false,
-                  "textFadeMultiplier": 0,
-                  "nodeSizeMultiplier": 1,
-                  "lineSizeMultiplier": 1,
-                  "collapse-forces": true,
-                  "centerStrength": 0.518713248970312,
-                  "repelStrength": 10,
-                  "linkStrength": 1,
-                  "linkDistance": 250,
-                  "scale": 0.7132754626224413,
-                  "close": false
-                }
-              },
-              "icon": "lucide-git-fork",
-              "title": "2025.9.27-国庆文艺汇演 的关系图"
-            },
-            "group": "af4c5e0341a6c0da"
+            }
           }
         ]
       }
@@ -231,25 +186,33 @@
   "active": "656a0a282f5844c0",
   "lastOpenFiles": [
     "2025国庆快乐.md",
-    "2026-04-08.md",
-    "2427•学习群-公告.md",
-    "81192-25years.md",
-    "关于哗众取丑行为几点看法.md",
-    "关于我整理了地理五三1-60所有选择题对应答案这件事.md",
-    "关于最近发生的一些事.md",
-    "地理卷子太有生活啦.md",
-    "somephoto.md",
-    "未命名 1.canvas",
-    "未命名.canvas",
-    "26qingming.md",
     "2025.9.27-国庆文艺汇演.md",
-    "未命名",
     "2025-10-05-092830.md",
-    "2025-10-03-142311.md",
     "2025-10-01-132403.md",
     "500.md",
     "26springfestival.md",
-    "2427•班级群-公告.md",
-    "create - 副本.md"
+    "26qingming.md",
+    "轻舟已过万重山~.md",
+    "重走来时路.md",
+    "backtowin10.md",
+    "comtest.md",
+    "extalk.md",
+    "yuanbaoopenclaw.md",
+    "to-zhengding.md",
+    "woc-我作业好像落陕西了！！！.md",
+    "zk100days.md",
+    "人生中第一个域名!.md",
+    "未完待续的诗，初中这二分之一-——致我们逝去的一年半初中生活.md",
+    "我去时间有点极限.md",
+    "终于搞好了.md",
+    "a66.md",
+    "最冷的一集.md",
+    "AI时代的“眼见不为实”——关于深度伪造（Deepfake）技术的风险调查与防范思考.md",
+    "2026-04-08.md",
+    "2427•学习群-公告.md",
+    "81192-25years.md",
+    "未命名 1.canvas",
+    "未命名.canvas",
+    "未命名"
   ]
 }
