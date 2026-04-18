@@ -55,39 +55,25 @@ const jsonLd = {
 			</div>
 		</div>
 
-		<div class="flex gap-8">
-			<!-- 画廊网格 - 使用瀑布流布局 -->
-			<div class="flex-1">
-				<div class="gallery grid grid-cols-2 gap-3 md:gap-4" id="gallery">
-					<div class="loading-spinner col-span-full flex justify-center items-center py-20">
-						<div class="relative">
-							<div class="w-16 h-16 border-4 border-gray-200 dark:border-gray-700 rounded-full animate-spin border-t-blue-500"></div>
-						</div>
-					</div>
-				</div>
-
-				<!-- 错误提示 -->
-				<div class="error-message hidden col-span-full flex justify-center items-center py-20">
-					<div class="text-center text-red-500 p-8 bg-red-50 dark:bg-red-900/20 rounded-2xl">
-						<p class="text-xl font-semibold mb-3">😢 加载失败</p>
-						<p id="error-text" class="text-base"></p>
-					</div>
-				</div>
-			</div>
-
-			<!-- 右侧 Timeline -->
-			<div class="hidden lg:block w-56 flex-shrink-0">
-				<div class="sticky top-8 max-h-[calc(100vh-10rem)] overflow-y-auto timeline-container bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-5">
-					<h3 class="text-base font-semibold text-gray-700 dark:text-gray-300 mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
-						时间线
-					</h3>
-					<div class="timeline space-y-3" id="timeline"></div>
+		<!-- 画廊网格 - 使用瀑布流布局 -->
+		<div class="gallery columns-2 md:columns-3 gap-3 md:gap-4 space-y-3 md:space-y-4" id="gallery">
+			<div class="loading-spinner col-span-full flex justify-center items-center py-20">
+				<div class="relative">
+					<div class="w-16 h-16 border-4 border-gray-200 dark:border-gray-700 rounded-full animate-spin border-t-blue-500"></div>
 				</div>
 			</div>
 		</div>
 
+		<!-- 错误提示 -->
+		<div class="error-message hidden col-span-full flex justify-center items-center py-20">
+			<div class="text-center text-red-500 p-8 bg-red-50 dark:bg-red-900/20 rounded-2xl">
+				<p class="text-xl font-semibold mb-3">😢 加载失败</p>
+				<p id="error-text" class="text-base"></p>
+			</div>
+		</div>
+
 		<!-- 月份筛选（移动端显示） -->
-		<div class="month-bar flex flex-wrap justify-center gap-3 mb-8 lg:hidden" id="monthButtons"></div>
+		<div class="month-bar flex flex-wrap justify-center gap-3 mb-8" id="monthButtons"></div>
 	</div>
 </MainGridLayout>
 
@@ -386,16 +372,17 @@ const jsonLd = {
 		
 		images.forEach((image, index) => {
 		const item = document.createElement('div');
-		item.className = 'gallery-item group relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:scale-[1.02]';
+		item.className = 'gallery-item group relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:scale-[1.02] break-inside-avoid';
 		item.onclick = () => openLightbox(index);
 
 		item.innerHTML = `
-			<div class="overflow-hidden bg-gray-100 dark:bg-gray-700 aspect-[3/4]">
+			<div class="overflow-hidden bg-gray-100 dark:bg-gray-700">
 				<img 
 					data-src="${image.url}" 
 					alt="${image.name}" 
-					class="lazy-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-0"
-					onerror="this.parentElement.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-500\\'><span class=\\'text-5xl\\'>🖼️</span></div>'"
+					loading="lazy"
+					class="lazy-image w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105 min-h-[200px] opacity-0"
+					onerror="this.parentElement.parentElement.innerHTML='<div class=\\'w-full h-64 flex items-center justify-center bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-500\\'><span class=\\'text-5xl\\'>🖼️</span></div>'"
 				>
 			</div>
 			<div class="gallery-item-info absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-5">
@@ -426,7 +413,7 @@ function initLazyLoading() {
 	const queue = [];
 
 	const imageObserver = new IntersectionObserver((entries, observer) => {
-		// 按 DOM 顺序加载（已经是横向排列的顺序）
+		// 按 DOM 顺序加载（已经是瀑布流顺序）
 		entries.forEach(entry => {
 			if (!entry.isIntersecting) return;
 
