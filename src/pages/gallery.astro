@@ -420,27 +420,79 @@ const jsonLd = {
 	function initLazyLoading() {
 		const lazyImages = document.querySelectorAll('.lazy-image');
 		
-		const imageObserver = new IntersectionObserver((entries, observer) => {
-			entries.forEach(entry => {
-				if (!entry.isIntersecting) return;
+		// 创建 Image 对象用于加载，控制并发数
+		let loadingCount = 0;
+		const maxConcurrent = 3; // 最多同时加载 3 张图片
+		const queue = [];
 
+		const imageObserver = new IntersectionObserver((entries, observer) => {
+			// 收集所有可见的图片并按位置排序
+			const visibleImages = entries
+				.filter(entry => entry.isIntersecting)
+				.sort((a, b) => {
+					// 按从上到下的顺序排序
+					const rectA = a.target.getBoundingClientRect();
+					const rectB = b.target.getBoundingClientRect();
+					return rectA.top - rectB.top;
+				});
+
+			visibleImages.forEach(entry => {
 				const img = entry.target;
 				const src = img.getAttribute('data-src');
 				
-				if (src) {
-					img.onload = () => {
-						img.classList.remove('opacity-0');
-					};
-					img.src = src;
-					img.removeAttribute('data-src');
-				}
-				
-				observer.unobserve(img);
+				if (!src) return;
+
+				// 如果已经在加载队列中，跳过
+				if (queue.includes(img) || !img.getAttribute('data-src')) return;
+
+				queue.push(img);
+				tryLoadImage(img, observer);
 			});
 		}, {
-			rootMargin: '200px 0px',
+			rootMargin: '100px 0px', // 减小预加载距离
 			threshold: 0.01
 		});
+
+		function tryLoadImage(img, observer) {
+			if (loadingCount >= maxConcurrent) return;
+
+			const src = img.getAttribute('data-src');
+			if (!src) return;
+
+			loadingCount++;
+			
+			const tempImg = new Image();
+			tempImg.onload = () => {
+				img.src = src;
+				img.removeAttribute('data-src');
+				img.classList.remove('opacity-0');
+				observer.unobserve(img);
+				loadingCount--;
+				
+				// 从队列中移除
+				const index = queue.indexOf(img);
+				if (index > -1) queue.splice(index, 1);
+				
+				// 尝试加载下一张
+				processQueue(observer);
+			};
+			tempImg.onerror = () => {
+				loadingCount--;
+				const index = queue.indexOf(img);
+				if (index > -1) queue.splice(index, 1);
+				processQueue(observer);
+			};
+			tempImg.src = src;
+		}
+
+		function processQueue(observer) {
+			if (loadingCount >= maxConcurrent || queue.length === 0) return;
+			
+			const nextImg = queue[0];
+			if (nextImg) {
+				tryLoadImage(nextImg, observer);
+			}
+		}
 
 		lazyImages.forEach(img => imageObserver.observe(img));
 	}
