@@ -22,72 +22,72 @@ const jsonLd = {
 	<BannerTitle slot="banner-title"></BannerTitle>
 	<script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify(jsonLd)}></script>
 	
-	<div class="w-full max-w-6xl mx-auto px-4 py-8">
+	<div class="w-full max-w-7xl mx-auto px-6 py-10">
 		<!-- 标题区域 -->
-		<div class="text-center mb-8">
-			<h1 class="text-3xl font-bold text-gray-800 dark:text-gray-200 mb-2">
+		<div class="text-center mb-12">
+			<h1 class="text-4xl font-bold text-gray-800 dark:text-gray-200 mb-3">
 				📷 画廊
 			</h1>
-			<p class="text-gray-600 dark:text-gray-400">
+			<p class="text-gray-600 dark:text-gray-400 text-lg">
 				记录美好瞬间
 			</p>
 		</div>
 
 		<!-- 刷新提示 -->
-		<div id="refresh-notice" class="hidden mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl text-center">
-			<p class="text-blue-700 dark:text-blue-300 mb-3">
+		<div id="refresh-notice" class="hidden mb-8 p-5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl text-center">
+			<p class="text-blue-700 dark:text-blue-300 mb-4 text-base">
 				👋 画廊需要刷新页面才能加载
 			</p>
-			<button onclick="window.location.reload()" class="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors">
+			<button onclick="window.location.reload()" class="px-8 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-medium transition-colors text-base">
 				🔄 刷新页面
 			</button>
 		</div>
 
 		<!-- 统计信息 -->
-		<div class="flex justify-center gap-6 mb-6 text-sm text-gray-600 dark:text-gray-400">
-			<div class="flex items-center gap-2">
-				<span>📁</span>
-				<span><strong id="totalMonths">0</strong> 个月份</span>
+		<div class="flex justify-center gap-8 mb-10 text-base text-gray-600 dark:text-gray-400">
+			<div class="flex items-center gap-3">
+				<span class="text-xl">📁</span>
+				<span class="text-base"><strong id="totalMonths">0</strong> 个月份</span>
 			</div>
-			<div class="flex items-center gap-2">
-				<span>🖼️</span>
-				<span><strong id="totalImages">0</strong> 张图片</span>
+			<div class="flex items-center gap-3">
+				<span class="text-xl">🖼️</span>
+				<span class="text-base"><strong id="totalImages">0</strong> 张图片</span>
 			</div>
 		</div>
 
-		<div class="flex gap-6">
+		<div class="flex gap-8">
 			<!-- 画廊网格 - 使用瀑布流布局 -->
 			<div class="flex-1">
-				<div class="gallery columns-2 md:columns-3 lg:columns-4 gap-3 md:gap-4 space-y-3 md:space-y-4" id="gallery">
+				<div class="gallery columns-2 md:columns-3 gap-6 md:gap-8 space-y-6 md:space-y-8" id="gallery">
 					<div class="loading-spinner col-span-full flex justify-center items-center py-20">
 						<div class="relative">
-							<div class="w-12 h-12 border-4 border-gray-200 dark:border-gray-700 rounded-full animate-spin border-t-blue-500"></div>
+							<div class="w-16 h-16 border-4 border-gray-200 dark:border-gray-700 rounded-full animate-spin border-t-blue-500"></div>
 						</div>
 					</div>
 				</div>
 
 				<!-- 错误提示 -->
 				<div class="error-message hidden col-span-full flex justify-center items-center py-20">
-					<div class="text-center text-red-500 p-6 bg-red-50 dark:bg-red-900/20 rounded-xl">
-						<p class="text-lg font-semibold mb-2">😢 加载失败</p>
-						<p id="error-text" class="text-sm"></p>
+					<div class="text-center text-red-500 p-8 bg-red-50 dark:bg-red-900/20 rounded-2xl">
+						<p class="text-xl font-semibold mb-3">😢 加载失败</p>
+						<p id="error-text" class="text-base"></p>
 					</div>
 				</div>
 			</div>
 
 			<!-- 右侧 Timeline -->
-			<div class="hidden lg:block w-48 flex-shrink-0">
-				<div class="sticky top-8 max-h-[calc(100vh-8rem)] overflow-y-auto timeline-container bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
-					<h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">
+			<div class="hidden lg:block w-56 flex-shrink-0">
+				<div class="sticky top-8 max-h-[calc(100vh-10rem)] overflow-y-auto timeline-container bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-5">
+					<h3 class="text-base font-semibold text-gray-700 dark:text-gray-300 mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
 						时间线
 					</h3>
-					<div class="timeline space-y-2" id="timeline"></div>
+					<div class="timeline space-y-3" id="timeline"></div>
 				</div>
 			</div>
 		</div>
 
 		<!-- 月份筛选（移动端显示） -->
-		<div class="month-bar flex flex-wrap justify-center gap-2 mb-6 lg:hidden" id="monthButtons"></div>
+		<div class="month-bar flex flex-wrap justify-center gap-3 mb-8 lg:hidden" id="monthButtons"></div>
 	</div>
 </MainGridLayout>
 
@@ -385,34 +385,34 @@ const jsonLd = {
 		gallery.innerHTML = '';
 		
 		images.forEach((image, index) => {
-			const item = document.createElement('div');
-			item.className = 'gallery-item group relative bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105 break-inside-avoid mb-3 md:mb-4';
-			item.onclick = () => openLightbox(index);
+		const item = document.createElement('div');
+		item.className = 'gallery-item group relative bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:scale-[1.02] break-inside-avoid';
+		item.onclick = () => openLightbox(index);
 
-			item.innerHTML = `
-				<div class="overflow-hidden bg-gray-100 dark:bg-gray-700">
-					<img 
-						src="${image.url}" 
-						alt="${image.name}" 
-						loading="lazy"
-						class="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-110"
-						onerror="this.parentElement.parentElement.innerHTML='<div class=\\'w-full h-48 flex items-center justify-center bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-500\\'><span class=\\'text-4xl\\'>🖼️</span></div>'"
-					>
-				</div>
-				<div class="gallery-item-info absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-					<div class="text-white transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-						<div class="gallery-item-name text-sm font-semibold mb-1 truncate">${image.name}</div>
-						<div class="gallery-item-meta text-xs text-gray-200 flex items-center gap-2">
-							<span>${formatDate(image.upload_date || image.created_at)}</span>
-							<span>•</span>
-							<span>${formatFileSize(image.size)}</span>
-						</div>
+		item.innerHTML = `
+			<div class="overflow-hidden bg-gray-100 dark:bg-gray-700">
+				<img 
+					src="${image.url}" 
+					alt="${image.name}" 
+					loading="lazy"
+					class="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105 min-h-[200px]"
+					onerror="this.parentElement.parentElement.innerHTML='<div class=\\'w-full h-64 flex items-center justify-center bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-500\\'><span class=\\'text-5xl\\'>🖼️</span></div>'"
+				>
+			</div>
+			<div class="gallery-item-info absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-5">
+				<div class="text-white transform translate-y-3 group-hover:translate-y-0 transition-transform duration-300">
+					<div class="gallery-item-name text-base font-semibold mb-2 truncate">${image.name}</div>
+					<div class="gallery-item-meta text-sm text-gray-200 flex items-center gap-3">
+						<span>${formatDate(image.upload_date || image.created_at)}</span>
+						<span>•</span>
+						<span>${formatFileSize(image.size)}</span>
 					</div>
 				</div>
-			`;
+			</div>
+		`;
 
-			gallery.appendChild(item);
-		});
+		gallery.appendChild(item);
+	});
 	}
 
 	function openLightbox(index) {
