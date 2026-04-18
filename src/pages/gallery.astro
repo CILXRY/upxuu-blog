@@ -22,7 +22,7 @@ const jsonLd = {
 	<BannerTitle slot="banner-title"></BannerTitle>
 	<script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify(jsonLd)}></script>
 	
-	<div class="w-full max-w-5xl mx-auto px-4 py-8">
+	<div class="w-full max-w-6xl mx-auto px-4 py-8">
 		<!-- 标题区域 -->
 		<div class="text-center mb-8">
 			<h1 class="text-3xl font-bold text-gray-800 dark:text-gray-200 mb-2">
@@ -55,25 +55,39 @@ const jsonLd = {
 			</div>
 		</div>
 
-		<!-- 月份筛选 -->
-		<div class="month-bar flex flex-wrap justify-center gap-2 mb-6" id="monthButtons"></div>
+		<div class="flex gap-6">
+			<!-- 画廊网格 - 使用瀑布流布局 -->
+			<div class="flex-1">
+				<div class="gallery columns-2 md:columns-3 lg:columns-4 gap-3 md:gap-4 space-y-3 md:space-y-4" id="gallery">
+					<div class="loading-spinner col-span-full flex justify-center items-center py-20">
+						<div class="relative">
+							<div class="w-12 h-12 border-4 border-gray-200 dark:border-gray-700 rounded-full animate-spin border-t-blue-500"></div>
+						</div>
+					</div>
+				</div>
 
-		<!-- 画廊网格 - 使用瀑布流布局 -->
-		<div class="gallery columns-2 md:columns-3 lg:columns-4 gap-3 md:gap-4 space-y-3 md:space-y-4" id="gallery">
-			<div class="loading-spinner col-span-full flex justify-center items-center py-20">
-				<div class="relative">
-					<div class="w-12 h-12 border-4 border-gray-200 dark:border-gray-700 rounded-full animate-spin border-t-blue-500"></div>
+				<!-- 错误提示 -->
+				<div class="error-message hidden col-span-full flex justify-center items-center py-20">
+					<div class="text-center text-red-500 p-6 bg-red-50 dark:bg-red-900/20 rounded-xl">
+						<p class="text-lg font-semibold mb-2">😢 加载失败</p>
+						<p id="error-text" class="text-sm"></p>
+					</div>
+				</div>
+			</div>
+
+			<!-- 右侧 Timeline -->
+			<div class="hidden lg:block w-48 flex-shrink-0">
+				<div class="sticky top-8 max-h-[calc(100vh-8rem)] overflow-y-auto timeline-container bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
+					<h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 pb-2 border-b border-gray-200 dark:border-gray-700">
+						时间线
+					</h3>
+					<div class="timeline space-y-2" id="timeline"></div>
 				</div>
 			</div>
 		</div>
 
-		<!-- 错误提示 -->
-		<div class="error-message hidden col-span-full flex justify-center items-center py-20">
-			<div class="text-center text-red-500 p-6 bg-red-50 dark:bg-red-900/20 rounded-xl">
-				<p class="text-lg font-semibold mb-2">😢 加载失败</p>
-				<p id="error-text" class="text-sm"></p>
-			</div>
-		</div>
+		<!-- 月份筛选（移动端显示） -->
+		<div class="month-bar flex flex-wrap justify-center gap-2 mb-6 lg:hidden" id="monthButtons"></div>
 	</div>
 </MainGridLayout>
 
@@ -242,6 +256,47 @@ const jsonLd = {
 			btn.onclick = () => loadMonth(monthInfo.month, btn);
 			container.appendChild(btn);
 		});
+
+		// 渲染 Timeline
+		renderTimeline();
+	}
+
+	function renderTimeline() {
+		const container = document.getElementById('timeline');
+		container.innerHTML = '';
+
+		allMonths.forEach((monthInfo, index) => {
+			const item = document.createElement('div');
+			item.className = 'timeline-item relative pl-4 pb-3 border-l-2 border-gray-200 dark:border-gray-700 last:pb-0 cursor-pointer hover:border-blue-400 dark:hover:border-blue-500 transition-colors' + (index === 0 ? ' active border-blue-500 dark:border-blue-500' : '');
+			
+			const dot = document.createElement('div');
+			dot.className = 'absolute left-[-5px] top-1 w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-600' + (index === 0 ? ' bg-blue-500' : '');
+			
+			const month = document.createElement('div');
+			month.className = 'text-xs font-medium text-gray-500 dark:text-gray-400';
+			month.textContent = monthInfo.month.replace('-', '.');
+			
+			const count = document.createElement('div');
+			count.className = 'text-sm font-semibold text-gray-700 dark:text-gray-300';
+			count.textContent = monthInfo.displayName;
+			
+			const imageCount = document.createElement('div');
+			imageCount.className = 'text-xs text-gray-400 dark:text-gray-500';
+			imageCount.textContent = `${monthInfo.count} 张`;
+
+			item.appendChild(dot);
+			item.appendChild(month);
+			item.appendChild(count);
+			item.appendChild(imageCount);
+			
+			item.onclick = () => {
+				loadMonth(monthInfo.month, document.querySelectorAll('.month-btn')[index]);
+				// 滚动到顶部
+				window.scrollTo({ top: 0, behavior: 'smooth' });
+			};
+			
+			container.appendChild(item);
+		});
 	}
 
 	async function loadMonth(monthStr, clickedBtn) {
@@ -250,6 +305,7 @@ const jsonLd = {
 		showLoading();
 		isLoading = true;
 
+		// 更新月份按钮激活状态
 		if (clickedBtn) {
 			document.querySelectorAll('.month-btn').forEach(btn => {
 				btn.classList.remove('active', 'bg-blue-500', 'text-white', 'hover:bg-blue-600', 'dark:hover:bg-blue-600');
@@ -258,6 +314,9 @@ const jsonLd = {
 			clickedBtn.classList.remove('bg-gray-100', 'dark:bg-gray-800', 'text-gray-700', 'dark:text-gray-300', 'hover:bg-blue-100', 'dark:hover:bg-blue-900/30');
 			clickedBtn.classList.add('active', 'bg-blue-500', 'text-white', 'hover:bg-blue-600', 'dark:hover:bg-blue-600');
 		}
+
+		// 更新 timeline 激活状态
+		updateTimelineActive(monthStr);
 
 		try {
 			// 如果已经加载过这个月，直接使用缓存
@@ -288,6 +347,24 @@ const jsonLd = {
 		} finally {
 			isLoading = false;
 		}
+	}
+
+	function updateTimelineActive(monthStr) {
+		const items = document.querySelectorAll('.timeline-item');
+		items.forEach((item, index) => {
+			const dot = item.querySelector('.absolute');
+			if (allMonths[index].month === monthStr) {
+				item.classList.add('active', 'border-blue-500', 'dark:border-blue-500');
+				item.classList.remove('border-gray-200', 'dark:border-gray-700');
+				dot.classList.add('bg-blue-500');
+				dot.classList.remove('bg-gray-300', 'dark:bg-gray-600');
+			} else {
+				item.classList.remove('active', 'border-blue-500', 'dark:border-blue-500');
+				item.classList.add('border-gray-200', 'dark:border-gray-700');
+				dot.classList.remove('bg-blue-500');
+				dot.classList.add('bg-gray-300', 'dark:bg-gray-600');
+			}
+		});
 	}
 
 	function renderGallery(images) {
@@ -450,6 +527,23 @@ const jsonLd = {
 	}
 
 	.month-bar::-webkit-scrollbar-thumb:hover {
+		background: rgba(0, 0, 0, 0.3);
+	}
+
+	.timeline-container::-webkit-scrollbar {
+		width: 4px;
+	}
+
+	.timeline-container::-webkit-scrollbar-track {
+		background: transparent;
+	}
+
+	.timeline-container::-webkit-scrollbar-thumb {
+		background: rgba(0, 0, 0, 0.2);
+		border-radius: 2px;
+	}
+
+	.timeline-container::-webkit-scrollbar-thumb:hover {
 		background: rgba(0, 0, 0, 0.3);
 	}
 
