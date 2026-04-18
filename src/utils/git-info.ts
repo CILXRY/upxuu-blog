@@ -13,7 +13,7 @@ export interface CommitInfo {
 export async function getLatestCommit(): Promise<CommitInfo | null> {
 	try {
 		// 在生产环境中，从 GitHub API 获取
-		const response = await fetch('https://api.github.com/repos/lijiaxu2021/myblog/commits?per_page=1', {
+		const response = await fetch('https://api.github.com/repos/ImUpXuu/myblog/commits?per_page=1', {
 			headers: {
 				'Accept': 'application/vnd.github.v3+json',
 			},
