@@ -420,24 +420,43 @@ const jsonLd = {
 	function initLazyLoading() {
 		const lazyImages = document.querySelectorAll('.lazy-image');
 		
-		// 创建 Image 对象用于加载，控制并发数
+		// 控制并发数
 		let loadingCount = 0;
-		const maxConcurrent = 3; // 最多同时加载 3 张图片
+		const maxConcurrent = 6; // 增加并发数，一行 2 个，3 行就是 6 个
 		const queue = [];
 
 		const imageObserver = new IntersectionObserver((entries, observer) => {
-			// 收集所有可见的图片并按位置排序
+			// 收集所有可见的图片
 			const visibleImages = entries
 				.filter(entry => entry.isIntersecting)
-				.sort((a, b) => {
-					// 按从上到下的顺序排序
-					const rectA = a.target.getBoundingClientRect();
-					const rectB = b.target.getBoundingClientRect();
-					return rectA.top - rectB.top;
+				.map(entry => {
+					const img = entry.target;
+					const rect = img.getBoundingClientRect();
+					return { img, rect };
 				});
 
-			visibleImages.forEach(entry => {
-				const img = entry.target;
+			// 蛇形排序：先按行（y 坐标分组），再按列（x 坐标）
+			// 1. 先按 y 坐标分组（同一行的图片 y 坐标相近）
+			const rows = new Map();
+			visibleImages.forEach(({ img, rect }) => {
+				// 使用 y 坐标的中心点作为行的标识，允许 50px 的误差
+				const rowKey = Math.round(rect.top / 50) * 50;
+				if (!rows.has(rowKey)) {
+					rows.set(rowKey, []);
+				}
+				rows.get(rowKey).push({ img, rect, x: rect.left });
+			});
+
+			// 2. 按行从上到下排序
+			const sortedRows = Array.from(rows.entries())
+				.sort((a, b) => a[0] - b[0])
+				.flatMap(([_, items]) => 
+					// 3. 每行内按 x 坐标从左到右排序
+					items.sort((a, b) => a.x - b.x)
+						.map(item => item.img)
+				);
+
+			sortedRows.forEach(img => {
 				const src = img.getAttribute('data-src');
 				
 				if (!src) return;
@@ -449,7 +468,7 @@ const jsonLd = {
 				tryLoadImage(img, observer);
 			});
 		}, {
-			rootMargin: '100px 0px', // 减小预加载距离
+			rootMargin: '100px 0px',
 			threshold: 0.01
 		});
 
