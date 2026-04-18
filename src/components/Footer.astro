@@ -18,8 +18,35 @@ const currentYear = new Date().getFullYear();
         <a class="transition link text-[var(--primary)] font-medium" target="_blank" href="https://astro.build">Astro</a> &
         <a class="transition link text-[var(--primary)] font-medium" target="_blank" href="https://github.com/saicaca/fuwari">Fuwari</a><br>
         <a class="transition link text-[var(--primary)] font-medium" target="_blank" href="https://icp.gov.moe/?keyword=20269996">萌 ICP 备 20269996 号</a>
-        <a href="https://hopedomain.com/zh/age/upxuu.com" target="_blank" class="inline-block mt-2">
-            <img src="https://hopedomain.com/api/badge/domain-age/upxuu.com?theme=whatsapp&lang=zh" alt="域名年龄" class="h-auto max-w-full" />
-        </a>
+        <div id="umami-stats" class="mt-2 flex justify-center gap-4 text-xs text-gray-600 dark:text-gray-400">
+            <span>👁️ 总访问量：<span id="total-views">-</span></span>
+            <span>👥 总访问人数：<span id="total-visitors">-</span></span>
+        </div>
     </div>
 </div>
+
+<script>
+async function fetchUmamiStats() {
+    try {
+        const now = Date.now();
+        const startAt = new Date('2024-01-01').getTime();
+        const response = await fetch(`https://upxuu.com/statsapi/stats?startAt=${startAt}&endAt=${now}`);
+        if (!response.ok) throw new Error('Failed to fetch');
+        const data = await response.json();
+        
+        const viewsEl = document.getElementById('total-views');
+        const visitorsEl = document.getElementById('total-visitors');
+        
+        if (viewsEl && data.value?.pageviews) {
+            viewsEl.textContent = data.value.pageviews.toLocaleString('zh-CN');
+        }
+        if (visitorsEl && data.value?.visitors) {
+            visitorsEl.textContent = data.value.visitors.toLocaleString('zh-CN');
+        }
+    } catch (error) {
+        console.error('Error fetching umami stats:', error);
+    }
+}
+
+fetchUmamiStats();
+</script>
