@@ -56,7 +56,7 @@ const jsonLd = {
 		</div>
 
 		<!-- 画廊网格 - 使用瀑布流布局 -->
-		<div class="gallery grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4" id="gallery">
+		<div class="gallery grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4" id="gallery">
 			<div class="loading-spinner col-span-full flex justify-center items-center py-20">
 				<div class="relative">
 					<div class="w-16 h-16 border-4 border-gray-200 dark:border-gray-700 rounded-full animate-spin border-t-blue-500"></div>
@@ -314,13 +314,13 @@ const jsonLd = {
 		item.onclick = () => openLightbox(index);
 
 		item.innerHTML = `
-			<div class="overflow-hidden bg-gray-100 dark:bg-gray-700">
+			<div class="overflow-hidden bg-gray-100 dark:bg-gray-700 aspect-[4/3]">
 				<img 
 					data-src="${image.url}" 
 					alt="${image.name}" 
 					loading="lazy"
-					class="lazy-image w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105 min-h-[200px] opacity-0"
-					onerror="this.parentElement.parentElement.innerHTML='<div class=\\'w-full h-64 flex items-center justify-center bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-500\\'><span class=\\'text-5xl\\'>🖼️</span></div>'"
+					class="lazy-image w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-0"
+					onerror="this.parentElement.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-500\\'><span class=\\'text-5xl\\'>🖼️</span></div>'"
 				>
 			</div>
 			<div class="gallery-item-info absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-5">
