@@ -242,47 +242,6 @@ const jsonLd = {
 			btn.onclick = () => loadMonth(monthInfo.month, btn);
 			container.appendChild(btn);
 		});
-
-		// 渲染 Timeline
-		renderTimeline();
-	}
-
-	function renderTimeline() {
-		const container = document.getElementById('timeline');
-		container.innerHTML = '';
-
-		allMonths.forEach((monthInfo, index) => {
-			const item = document.createElement('div');
-			item.className = 'timeline-item relative pl-4 pb-3 border-l-2 border-gray-200 dark:border-gray-700 last:pb-0 cursor-pointer hover:border-blue-400 dark:hover:border-blue-500 transition-colors' + (index === 0 ? ' active border-blue-500 dark:border-blue-500' : '');
-			
-			const dot = document.createElement('div');
-			dot.className = 'absolute left-[-5px] top-1 w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-600' + (index === 0 ? ' bg-blue-500' : '');
-			
-			const month = document.createElement('div');
-			month.className = 'text-xs font-medium text-gray-500 dark:text-gray-400';
-			month.textContent = monthInfo.month.replace('-', '.');
-			
-			const count = document.createElement('div');
-			count.className = 'text-sm font-semibold text-gray-700 dark:text-gray-300';
-			count.textContent = monthInfo.displayName;
-			
-			const imageCount = document.createElement('div');
-			imageCount.className = 'text-xs text-gray-400 dark:text-gray-500';
-			imageCount.textContent = `${monthInfo.count} 张`;
-
-			item.appendChild(dot);
-			item.appendChild(month);
-			item.appendChild(count);
-			item.appendChild(imageCount);
-			
-			item.onclick = () => {
-				loadMonth(monthInfo.month, document.querySelectorAll('.month-btn')[index]);
-				// 滚动到顶部
-				window.scrollTo({ top: 0, behavior: 'smooth' });
-			};
-			
-			container.appendChild(item);
-		});
 	}
 
 	async function loadMonth(monthStr, clickedBtn) {
@@ -300,9 +259,6 @@ const jsonLd = {
 			clickedBtn.classList.remove('bg-gray-100', 'dark:bg-gray-800', 'text-gray-700', 'dark:text-gray-300', 'hover:bg-blue-100', 'dark:hover:bg-blue-900/30');
 			clickedBtn.classList.add('active', 'bg-blue-500', 'text-white', 'hover:bg-blue-600', 'dark:hover:bg-blue-600');
 		}
-
-		// 更新 timeline 激活状态
-		updateTimelineActive(monthStr);
 
 		try {
 			// 如果已经加载过这个月，直接使用缓存
@@ -333,24 +289,6 @@ const jsonLd = {
 		} finally {
 			isLoading = false;
 		}
-	}
-
-	function updateTimelineActive(monthStr) {
-		const items = document.querySelectorAll('.timeline-item');
-		items.forEach((item, index) => {
-			const dot = item.querySelector('.absolute');
-			if (allMonths[index].month === monthStr) {
-				item.classList.add('active', 'border-blue-500', 'dark:border-blue-500');
-				item.classList.remove('border-gray-200', 'dark:border-gray-700');
-				dot.classList.add('bg-blue-500');
-				dot.classList.remove('bg-gray-300', 'dark:bg-gray-600');
-			} else {
-				item.classList.remove('active', 'border-blue-500', 'dark:border-blue-500');
-				item.classList.add('border-gray-200', 'dark:border-gray-700');
-				dot.classList.remove('bg-blue-500');
-				dot.classList.add('bg-gray-300', 'dark:bg-gray-600');
-			}
-		});
 	}
 
 	function renderGallery(images) {
