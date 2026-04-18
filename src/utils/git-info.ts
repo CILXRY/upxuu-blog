@@ -1,23 +1,80 @@
-/**
- * 获取 Git commit hash
- * 在构建时通过环境变量注入
- */
-
-export function getGitCommitHash(): string {
-	// 优先使用环境变量（由 CI/CD 注入）
-	if (import.meta.env.PUBLIC_COMMIT_HASH) {
-		return import.meta.env.PUBLIC_COMMIT_HASH;
-	}
-	
-	// 本地开发时返回开发标识
-	return 'development';
+export interface CommitInfo {
+	sha: string;
+	shortSha: string;
+	date: string;
+	message: string;
+	author: string;
 }
 
-export function getGitCommitDate(): string {
-	// 优先使用环境变量（由 CI/CD 注入）
-	if (import.meta.env.PUBLIC_COMMIT_DATE) {
-		return import.meta.env.PUBLIC_COMMIT_DATE;
+/**
+ * 获取最新的 Git commit 信息
+ * 通过 GitHub API 获取
+ */
+export async function getLatestCommit(): Promise<CommitInfo | null> {
+	try {
+		// 在生产环境中，从 GitHub API 获取
+		const response = await fetch('https://api.github.com/repos/lijiaxu2021/myblog/commits?per_page=1', {
+			headers: {
+				'Accept': 'application/vnd.github.v3+json',
+			},
+			// 5 分钟缓存
+			next: { revalidate: 300 }
+		});
+
+		if (!response.ok) {
+			throw new Error('Failed to fetch commit info');
+		}
+
+		const commits = await response.json();
+		if (commits && commits.length > 0) {
+			const commit = commits[0];
+			return {
+				sha: commit.sha,
+				shortSha: commit.sha.substring(0, 7),
+				date: commit.commit.author.date,
+				message: commit.commit.message,
+				author: commit.commit.author.name
+			};
+		}
+		return null;
+	} catch (error) {
+		console.error('Error fetching git info:', error);
+		return null;
 	}
-	
-	return new Date().toISOString().split('T')[0];
+}
+
+/**
+ * 格式化相对时间
+ */
+export function formatRelativeTime(dateString: string): string {
+	const date = new Date(dateString);
+	const now = new Date();
+	const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+	if (diffInSeconds < 60) {
+		return '刚刚';
+	}
+
+	const diffInMinute = Math.floor(diffInSeconds / 60);
+	if (diffInMinute < 60) {
+		return `${diffInMinute} 分钟前`;
+	}
+
+	const diffInHour = Math.floor(diffInMinute / 60);
+	if (diffInHour < 24) {
+		return `${diffInHour} 小时前`;
+	}
+
+	const diffInDay = Math.floor(diffInHour / 24);
+	if (diffInDay < 30) {
+		return `${diffInDay} 天前`;
+	}
+
+	const diffInMonth = Math.floor(diffInDay / 30);
+	if (diffInMonth < 12) {
+		return `${diffInMonth} 个月前`;
+	}
+
+	const diffInYear = Math.floor(diffInDay / 365);
+	return `${diffInYear} 年前`;
 }
