@@ -86,10 +86,13 @@
         }
     }
     
-    function showWelcomeToast() {
+    async function showWelcomeToast() {
         if (hasShownToast) return;
         
-        console.log('🎉 欢迎弹窗已触发');
+        // 等待所有数据加载完成
+        await Promise.all([fetchLocation(), fetchStats()]);
+        
+        console.log('🎉 欢迎弹窗数据已加载完成，准备显示');
         
         const toast = document.getElementById('welcome-toast');
         if (toast) {
@@ -118,20 +121,16 @@
     }
     
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             if (shouldShowWelcome()) {
                 markAsVisited();
-                fetchLocation();
-                fetchStats();
-                showWelcomeToast();
+                await showWelcomeToast();
             }
         });
     } else {
         if (shouldShowWelcome()) {
             markAsVisited();
-            fetchLocation();
-            fetchStats();
-            showWelcomeToast();
+            await showWelcomeToast();
         }
     }
     
