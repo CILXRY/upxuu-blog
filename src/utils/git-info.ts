@@ -22,11 +22,10 @@ export async function getLatestCommit(): Promise<CommitInfo | null> {
 		});
 
 		if (!response.ok) {
-			throw new Error(`Failed to fetch commit info: ${response.status}`);
+			throw new Error('Failed to fetch commit info');
 		}
 
 		const commits = await response.json();
-		
 		if (commits && commits.length > 0) {
 			const commit = commits[0];
 			return {
