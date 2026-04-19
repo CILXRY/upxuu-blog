@@ -43,13 +43,13 @@ const jsonLd = {
 				</h1>
 			</div>
 			
-			<div class="friends-grid flex flex-col sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-				{friends.map((friend, i) => (
+			<div class="friends-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+				{friends.map((friend) => (
 					<a
 						href={friend.url}
 						target="_blank"
 						rel="noopener noreferrer"
-						class={`friend-card block ${i === 0 ? 'order-last sm:order-none' : ''}`}
+						class="friend-card block"
 					>
 						<div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 transition-all duration-200 hover:shadow-lg hover:bg-gray-100 dark:hover:bg-gray-800">
 							<div class="flex items-center gap-3">

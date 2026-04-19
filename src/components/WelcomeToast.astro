@@ -152,10 +152,11 @@
     
     @media (max-width: 640px) {
         #welcome-toast {
-            top: 4rem;
+            top: auto;
+            bottom: 1rem;
             left: 50%;
             right: auto;
-            transform: translateX(-50%) translateY(-100%);
+            transform: translateX(-50%) translateY(100%);
             width: 90%;
             max-width: none;
             transition: transform 0.5s ease-out, opacity 0.5s ease-out;
@@ -163,6 +164,10 @@
         
         #welcome-toast.translate-y-0 {
             transform: translateX(-50%) translateY(0);
+        }
+        
+        #welcome-toast.translate-y-full {
+            transform: translateX(-50%) translateY(100%);
         }
         
         #welcome-toast .max-w-xs {
