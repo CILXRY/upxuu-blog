@@ -2,7 +2,7 @@
 
 import { profileConfig } from "../config";
 import { url } from "../utils/url-utils";
-import { getLatestCommit, formatRelativeTime, formatDate } from "../utils/git-info";
+import { getLatestCommit, formatDate } from "../utils/git-info";
 
 const currentYear = new Date().getFullYear();
 const commitInfo = await getLatestCommit();
