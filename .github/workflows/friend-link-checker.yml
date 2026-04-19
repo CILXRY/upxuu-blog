@@ -2,7 +2,7 @@ name: 🤝 友链申请自动处理
 
 on:
   issues:
-    types: [opened]
+    types: [opened, edited]
 
 jobs:
   process-friend-request:
@@ -33,6 +33,13 @@ jobs:
           # 提取友链页面 URL
           FRIEND_URL=$(echo "$BODY" | grep -A1 '### 友链页面 URL' | tail -1 | sed 's/^ *//;s/\r$//')
           
+          # 去除可能的引号
+          NAME=$(echo "$NAME" | sed 's/^`//;s/`$//')
+          DESC=$(echo "$DESC" | sed 's/^`//;s/`$//')
+          URL=$(echo "$URL" | sed 's/^`//;s/`$//')
+          AVATAR=$(echo "$AVATAR" | sed 's/^`//;s/`$//')
+          FRIEND_URL=$(echo "$FRIEND_URL" | sed 's/^`//;s/`$//')
+          
           echo "name=$NAME" >> $GITHUB_OUTPUT
           echo "desc=$DESC" >> $GITHUB_OUTPUT
           echo "url=$URL" >> $GITHUB_OUTPUT
@@ -40,23 +47,83 @@ jobs:
           echo "friend_url=$FRIEND_URL" >> $GITHUB_OUTPUT
           echo "Issue 内容: 名称=$NAME, 描述=$DESC, 链接=$URL, 头像=$AVATAR, 友链页=$FRIEND_URL"
 
-      - name: 验证友链页面是否包含 upxuu.com
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 安装 Playwright 浏览器
+        run: |
+          npm install -g playwright
+          npx playwright install chromium
+          npx playwright install-deps chromium
+
+      - name: 使用真实浏览器验证友链页面
         id: verify
         run: |
           FRIEND_URL="${{ steps.extract.outputs.friend_url }}"
           
-          echo "正在检查: $FRIEND_URL"
+          echo "正在使用真实浏览器检查: $FRIEND_URL"
           
-          # 获取友链页面内容
-          PAGE_CONTENT=$(curl -s -L "$FRIEND_URL" -H "User-Agent: Mozilla/5.0" 2>/dev/null || echo "")
+          # 使用 Playwright 创建真实浏览器访问
+          node << 'NODE_SCRIPT'
+          const { chromium } = require('playwright');
+          const fs = require('fs');
           
-          if echo "$PAGE_CONTENT" | grep -qi "upxuu.com"; then
-            echo "✅ 验证通过：找到 upxuu.com"
-            echo "result=pass" >> $GITHUB_OUTPUT
-          else
-            echo "❌ 验证失败：未找到 upxuu.com"
-            echo "result=fail" >> $GITHUB_OUTPUT
-          fi
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const context = await browser.newContext({
+              userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              viewport: { width: 1920, height: 1080 }
+            });
+            
+            const page = await context.newPage();
+            
+            try {
+              // 访问友链页面
+              await page.goto(process.env.FRIEND_URL, { 
+                waitUntil: 'networkidle',
+                timeout: 30000 
+              });
+              
+              // 等待页面加载完成
+              await page.waitForTimeout(3000);
+              
+              // 获取页面完整内容
+              const content = await page.content();
+              
+              // 也获取所有链接的 href
+              const links = await page.evaluate(() => {
+                return Array.from(document.querySelectorAll('a')).map(a => a.href);
+              });
+              
+              const allContent = content + '\n' + links.join('\n');
+              
+              console.log('页面标题:', await page.title());
+              console.log('页面 URL:', page.url());
+              
+              // 检查是否包含 upxuu.com
+              if (allContent.toLowerCase().includes('upxuu.com')) {
+                console.log('✅ 验证通过：找到 upxuu.com');
+                fs.writeFileSync('/tmp/verify_result', 'pass');
+              } else {
+                console.log('❌ 验证失败：未找到 upxuu.com');
+                console.log('页面内容预览:', content.substring(0, 500));
+                fs.writeFileSync('/tmp/verify_result', 'fail');
+              }
+            } catch (error) {
+              console.error('浏览器访问失败:', error.message);
+              fs.writeFileSync('/tmp/verify_result', 'fail');
+            } finally {
+              await browser.close();
+            }
+          })();
+          NODE_SCRIPT
+          
+          RESULT=$(cat /tmp/verify_result)
+          echo "result=$RESULT" >> $GITHUB_OUTPUT
+        env:
+          FRIEND_URL: ${{ steps.extract.outputs.friend_url }}
 
       - name: 更新友链配置文件 (验证通过)
         if: steps.verify.outputs.result == 'pass'
@@ -132,7 +199,7 @@ jobs:
               - 名称：${{ steps.extract.outputs.name }}
               - 链接：${{ steps.extract.outputs.url }}
               
-               Vercel 将自动重新部署，几分钟内更新生效。
+              ⚡ Vercel 将自动重新部署，几分钟内更新生效。
               
               感谢支持！🎉`
             })
@@ -148,10 +215,11 @@ jobs:
               repo: context.repo.repo,
               body: `## ⚠️ 友链申请需要修改
               
-              经检查，在你的友链页面中未找到 \`upxuu.com\`。
+              经真实浏览器检查，在你的友链页面中未找到 \`upxuu.com\`。
               
               🔍 **验证信息**
               - 友链页面：${{ steps.extract.outputs.friend_url }}
+              - 验证方式：真实浏览器访问（Playwright）
               - 验证结果：未找到 \`upxuu.com\`
               
               📝 **请按以下步骤操作**
@@ -163,7 +231,7 @@ jobs:
               
               2. 确保友链页面可以正常访问
               
-              3. 修改完成后，请回复此 Issue 告知我们重新验证
+              3. 修改完成后，请**编辑此 Issue** 触发重新验证
               
               如有疑问，欢迎在评论区交流！🤝`
             })
