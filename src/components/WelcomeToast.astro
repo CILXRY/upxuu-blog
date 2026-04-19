@@ -41,7 +41,7 @@
     
     async function fetchLocation() {
         try {
-            const response = await fetch('https://v2.xxapi.cn/api/ip?ip=122.228.216.223');
+            const response = await fetch('https://v2.xxapi.cn/api/ip');
             const data = await response.json();
             
             if (data.code === 200 && data.data) {
