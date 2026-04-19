@@ -89,6 +89,8 @@
     function showWelcomeToast() {
         if (hasShownToast) return;
         
+        console.log('🎉 欢迎弹窗已触发');
+        
         const toast = document.getElementById('welcome-toast');
         if (toast) {
             toast.style.display = 'block';
