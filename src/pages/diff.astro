@@ -3,87 +3,75 @@ import MainGridLayout from "../layouts/MainGridLayout.astro";
 import BannerTitle from "../components/BannerTitle.astro";
 import { profileConfig, siteConfig } from "../config";
 
-interface CommitFile {
-	filename: string;
-	status: 'added' | 'removed' | 'modified' | 'renamed';
-	additions: number;
-	deletions: number;
-}
-
 interface Commit {
 	sha: string;
 	shortSha: string;
 	date: string;
 	message: string;
 	author: string;
-	files: CommitFile[];
+	files?: any[];
 }
 
-interface DateGroup {
-	date: string;
-	formattedDate: string;
-	commits: Commit[];
-}
-
-interface MonthGroup {
+interface GroupedCommits {
 	year: number;
 	month: number;
-	formattedMonth: string;
-	dates: DateGroup[];
+	day: string;
+	commits: Commit[];
 }
 
 async function getCommitHistory(): Promise<Commit[]> {
 	try {
-		const response = await fetch('https://api.github.com/repos/ImUpXuu/myblog/commits?per_page=100', {
-			headers: {
-				'Accept': 'application/vnd.github.v3+json',
-			},
-			next: { revalidate: 300 }
-		});
-
-		if (!response.ok) {
-			throw new Error('Failed to fetch commit history');
-		}
-
-		const commits = await response.json();
+		const allCommits: Commit[] = [];
+		let page = 1;
 		
-		const commitsWithFiles = await Promise.all(commits.map(async (commit: any) => {
-			try {
-				const detailResponse = await fetch(commit.url, {
-					headers: {
-						'Accept': 'application/vnd.github.v3+json',
-					},
-				});
-				
-				if (detailResponse.ok) {
-					const detail = await detailResponse.json();
-					return {
-						sha: commit.sha,
-						shortSha: commit.sha.substring(0, 7),
-						date: commit.commit.author.date,
-						message: commit.commit.message,
-						author: commit.commit.author.name,
-						files: detail.files?.map((file: any) => ({
-							filename: file.filename,
-							status: file.status,
-							additions: file.additions,
-							deletions: file.deletions
-						})) || []
-					};
-				}
-			} catch (error) {
-				console.error('Failed to fetch files for commit:', commit.sha);
+		while (true) {
+			const response = await fetch(`https://api.github.com/repos/ImUpXuu/myblog/commits?per_page=100&page=${page}`, {
+				headers: {
+					'Accept': 'application/vnd.github.v3+json',
+				},
+				next: { revalidate: 300 }
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to fetch commit history');
 			}
+
+			const commits = await response.json();
 			
-			return {
+			if (commits.length === 0) break;
+			
+			allCommits.push(...commits.map((commit: any) => ({
 				sha: commit.sha,
 				shortSha: commit.sha.substring(0, 7),
 				date: commit.commit.author.date,
 				message: commit.commit.message,
-				author: commit.commit.author.name,
-				files: []
-			};
-		}));
+				author: commit.commit.author.name
+			})));
+			
+			page++;
+		}
+		
+		// 获取每个 commit 的文件更改
+		const commitsWithFiles = await Promise.all(
+			allCommits.map(async (commit) => {
+				try {
+					const response = await fetch(`https://api.github.com/repos/ImUpXuu/myblog/commits/${commit.sha}`, {
+						headers: {
+							'Accept': 'application/vnd.github.v3+json',
+						},
+						next: { revalidate: 300 }
+					});
+					
+					if (response.ok) {
+						const data = await response.json();
+						commit.files = data.files?.slice(0, 10) || []; // 只显示前 10 个文件
+					}
+				} catch (e) {
+					console.error('Failed to fetch files for commit:', commit.shortSha);
+				}
+				return commit;
+			})
+		);
 		
 		return commitsWithFiles;
 	} catch (error) {
@@ -104,66 +92,45 @@ function formatDate(dateString: string): string {
 	return `${year}-${month}-${day} ${hour}:${minute}`;
 }
 
-function formatDisplayDate(dateString: string): string {
-	const date = new Date(dateString);
-	date.setHours(date.getHours() + 8);
-	const year = date.getFullYear();
-	const month = String(date.getMonth() + 1).padStart(2, '0');
-	const day = String(date.getDate()).padStart(2, '0');
-	
-	return `${year}-${month}-${day}`;
+function getMonthName(month: number): string {
+	const months = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'];
+	return months[month - 1];
 }
 
-function formatMonth(year: number, month: number): string {
-	return `${year}年${month}月`;
-}
-
-function groupCommitsByDate(commits: Commit[]): DateGroup[] {
-	const groups = new Map<string, Commit[]>();
+function groupCommitsByDate(commits: Commit[]): GroupedCommits[] {
+	const groups = new Map<string, GroupedCommits>();
 	
 	commits.forEach(commit => {
-		const dateKey = formatDisplayDate(commit.date);
-		if (!groups.has(dateKey)) {
-			groups.set(dateKey, []);
-		}
-		groups.get(dateKey)!.push(commit);
-	});
-	
-	return Array.from(groups.entries()).map(([date, commits]) => ({
-		date,
-		formattedDate: date,
-		commits
-	}));
-}
-
-function groupByMonth(dateGroups: DateGroup[]): MonthGroup[] {
-	const months = new Map<string, MonthGroup>();
-	
-	dateGroups.forEach(dateGroup => {
-		const [year, month] = dateGroup.date.split('-').map(Number);
-		const monthKey = `${year}-${month}`;
+		const date = new Date(commit.date);
+		date.setHours(date.getHours() + 8);
+		const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 		
-		if (!months.has(monthKey)) {
-			months.set(monthKey, {
-				year,
-				month,
-				formattedMonth: formatMonth(year, month),
-				dates: []
+		if (!groups.has(dateKey)) {
+			groups.set(dateKey, {
+				year: date.getFullYear(),
+				month: date.getMonth() + 1,
+				day: dateKey,
+				commits: []
 			});
 		}
 		
-		months.get(monthKey)!.dates.push(dateGroup);
+		groups.get(dateKey)!.commits.push(commit);
 	});
 	
-	return Array.from(months.values()).sort((a, b) => {
-		if (a.year !== b.year) return b.year - a.year;
-		return b.month - a.month;
-	});
+	return Array.from(groups.values()).sort((a, b) => b.day.localeCompare(a.day));
 }
 
-const commits = await getCommitHistory();
-const dateGroups = groupCommitsByDate(commits);
-const monthGroups = groupByMonth(dateGroups);
+const allCommits = await getCommitHistory();
+const groupedCommits = groupCommitsByDate(allCommits);
+
+// 生成月份导航
+const monthNav = new Map<string, number>();
+groupedCommits.forEach(group => {
+	const key = `${group.year}-${String(group.month).padStart(2, '0')}`;
+	if (!monthNav.has(key)) {
+		monthNav.set(key, group.month);
+	}
+});
 
 const jsonLd = {
 	"@context": "https://schema.org",
@@ -190,60 +157,84 @@ const jsonLd = {
 				<h1 class="text-4xl font-bold text-gray-800 dark:text-gray-200 mb-3">
 					📝 更新日志
 				</h1>
-				<p class="text-gray-600 dark:text-gray-400">
+				<p class="text-gray-600 dark:text-gray-400 mb-6">
 					记录博客的每一次更新与改进
 				</p>
+				
+				<!-- 月份导航 -->
+				<div class="flex flex-wrap justify-center gap-2 mb-8">
+					{Array.from(monthNav.entries()).map(([key, month]) => {
+						const [year, monthNum] = key.split('-');
+						return (
+							<a
+								href={`#month-${key}`}
+								class="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg text-sm hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+							>
+								{year}年{getMonthName(parseInt(monthNum))}
+							</a>
+						);
+					})}
+				</div>
 			</div>
 			
-			<div class="month-navigation mb-8 flex flex-wrap gap-2 justify-center">
-				{monthGroups.map((month) => (
-					<a
-						href={`#month-${month.year}-${month.month}`}
-						class="px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full text-sm hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
-					>
-						{month.formattedMonth}
-					</a>
-				))}
-			</div>
-			
-			<div class="commit-timeline">
-				{monthGroups.map((month) => (
-					<div id={`month-${month.year}-${month.month}`} class="mb-8">
-						<h2 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-4 sticky top-20 bg-[var(--content-bg)] py-2 z-10">
-							{month.formattedMonth}
-						</h2>
-						
-						<div class="space-y-4">
-							{month.dates.map((dateGroup, dateIndex) => (
-								<div class="date-group">
-									<button
-										onclick={`toggleDateGroup('date-${dateIndex}-${month.year}-${month.month}')`}
-										class="w-full text-left mb-2"
-									>
-										<div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
-											<svg 
-												xmlns="http://www.w3.org/2000/svg" 
-												class="h-4 w-4 transition-transform"
-												id={`arrow-date-${dateIndex}-${month.year}-${month.month}`}
-												viewBox="0 0 20 20" 
-												fill="currentColor"
-											>
-												<path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
-											</svg>
-											<span class="font-medium">{dateGroup.formattedDate}</span>
-											<span class="text-xs">({dateGroup.commits.length} 个提交)</span>
+			<div class="commit-timeline relative">
+				{groupedCommits.map((group, groupIndex) => {
+					const monthId = `month-${group.year}-${String(group.month).padStart(2, '0')}`;
+					const isSameDay = group.commits.length > 1;
+					
+					return (
+						<div id={monthId} class="month-group mb-12 scroll-mt-24">
+							<!-- 月份标题 -->
+							<div class="sticky top-20 z-10 mb-6">
+								<div class="inline-block px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full text-sm font-semibold shadow-lg">
+									{group.year}年{getMonthName(group.month)}
+								</div>
+							</div>
+							
+							<!-- 按天分组 -->
+							{group.commits.reduce((days: any[], commit) => {
+								const date = new Date(commit.date);
+								date.setHours(date.getHours() + 8);
+								const dayKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+								
+								const existingDay = days.find(d => d.key === dayKey);
+								if (existingDay) {
+									existingDay.commits.push(commit);
+								} else {
+									days.push({
+										key: dayKey,
+										date: date,
+										commits: [commit]
+									});
+								}
+								
+								return days;
+							}, []).map((day: any, dayIndex: number) => (
+								<div class="day-group mb-6">
+									<!-- 日期标题 -->
+									<div class="flex items-center gap-3 mb-4">
+										<div class="flex-1 h-px bg-gradient-to-r from-blue-200 to-transparent dark:from-blue-800"></div>
+										<div class="text-sm font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-full">
+											{day.date.getMonth() + 1}月{day.date.getDate()}日
+											{day.commits.length > 1 && ` · ${day.commits.length} 次提交`}
 										</div>
-									</button>
+										<div class="flex-1 h-px bg-gradient-to-l from-blue-200 to-transparent dark:from-blue-800"></div>
+									</div>
 									
-									<div 
-										id={`date-${dateIndex}-${month.year}-${month.month}`}
-										class="ml-6 space-y-3"
-									>
-										{dateGroup.commits.map((commit) => (
-											<div class="commit-item relative pl-6 pb-2">
-												<div class="absolute left-0 top-3 w-3 h-3 rounded-full bg-blue-400 border-2 border-white dark:border-gray-800"></div>
+									<!-- Commits 列表 -->
+									<div class={`space-y-3 ${isSameDay && day.commits.length > 1 ? 'collapsible' : ''}`}>
+										{day.commits.map((commit: Commit, commitIndex: number) => (
+											<div 
+												class={`commit-item relative pl-8 pb-3 last:pb-0 ${isSameDay && commitIndex > 0 ? 'hidden' : ''}`}
+												data-day-index={dayIndex}
+												data-commit-index={commitIndex}
+											>
+												{(commitIndex !== day.commits.length - 1 || dayIndex !== groupedCommits.length - 1) && (
+													<div class="absolute left-3 top-6 bottom-0 w-0.5 bg-gradient-to-b from-blue-300 to-blue-100 dark:from-blue-700 dark:to-blue-900"></div>
+												)}
+												<div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-blue-500 border-4 border-white dark:border-gray-800 shadow-md"></div>
 												
-												<div class="bg-white dark:bg-gray-800/50 rounded-lg p-3 shadow-sm hover:shadow-md transition-shadow">
+												<div class="bg-white dark:bg-gray-800/50 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
 													<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
 														<div class="flex items-center gap-2 flex-wrap">
 															<a 
@@ -262,47 +253,65 @@ const jsonLd = {
 															by {commit.author}
 														</span>
 													</div>
-													
 													<p class="text-gray-700 dark:text-gray-300 text-sm mb-2">
 														{commit.message}
 													</p>
 													
-													{commit.files.length > 0 && (
-														<div class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-															<div class="flex flex-wrap gap-1">
-																{commit.files.map((file) => (
+													<!-- 更改的文件 -->
+													{commit.files && commit.files.length > 0 && (
+														<div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+															<div class="flex flex-wrap gap-2">
+																{commit.files.map((file: any) => (
 																	<span 
-																		class={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs ${
-																			file.status === 'added' 
-																				? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' 
-																				: file.status === 'removed'
-																				? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-																				: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
-																		}`}
-																		title={`${file.additions} 行添加，${file.deletions} 行删除`}
+																		class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs text-gray-600 dark:text-gray-400"
+																		title={file.filename}
 																	>
-																		{file.status === 'added' ? '+' : file.status === 'removed' ? '-' : 'M'}
-																		{file.filename.split('/').pop()}
-																		{file.additions > 0 && (
-																			<span class="text-xs opacity-75">+{file.additions}</span>
+																		{file.status === 'added' && <span class="text-green-600">➕</span>}
+																		{file.status === 'modified' && <span class="text-yellow-600">✏️</span>}
+																		{file.status === 'removed' && <span class="text-red-600">❌</span>}
+																		{file.status === 'renamed' && <span class="text-blue-600">🔄</span>}
+																		<span class="truncate max-w-[200px]">{file.filename}</span>
+																		{file.changes !== undefined && (
+																			<span class="text-gray-400 text-xs">
+																				+{file.additions} -{file.deletions}
+																			</span>
 																		)}
 																	</span>
 																))}
+																{commit.files.length >= 10 && (
+																	<span class="text-xs text-gray-500">
+																		... 还有更多
+																	</span>
+																)}
 															</div>
 														</div>
 													)}
 												</div>
 											</div>
 										))}
+										
+										<!-- 展开/收起按钮 -->
+										{isSameDay && day.commits.length > 1 && (
+											<button
+												onClick={`toggleDayCommits(this, ${dayIndex})`}
+												class="ml-8 mt-2 text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+											>
+												<span class="expand-text">展开全部 {{ day.commits.length - 1 }} 条提交</span>
+												<span class="collapse-text hidden">收起</span>
+												<svg class="w-3 h-3 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+												</svg>
+											</button>
+										)}
 									</div>
 								</div>
 							))}
 						</div>
-					</div>
-				))}
+					);
+				})}
 			</div>
 			
-			{commits.length === 0 && (
+			{groupedCommits.length === 0 && (
 				<div class="text-center py-12">
 					<p class="text-gray-500 dark:text-gray-400">
 						暂无更新记录
@@ -314,41 +323,36 @@ const jsonLd = {
 </MainGridLayout>
 
 <script>
-	function toggleDateGroup(dateId: string) {
-		const element = document.getElementById(dateId);
-		const arrow = document.getElementById(`arrow-${dateId}`);
+	function toggleDayCommits(button: HTMLElement, dayIndex: number) {
+		const commitItems = document.querySelectorAll(`[data-day-index="${dayIndex}"]`);
+		const expandText = button.querySelector('.expand-text');
+		const collapseText = button.querySelector('.collapse-text');
+		const arrow = button.querySelector('svg');
 		
-		if (element && arrow) {
-			const isCollapsed = element.style.display === 'none';
-			
-			if (isCollapsed) {
-				element.style.display = 'block';
-				arrow.style.transform = 'rotate(0deg)';
-			} else {
-				element.style.display = 'none';
-				arrow.style.transform = 'rotate(-90deg)';
-			}
+		if (commitItems[0].classList.contains('hidden')) {
+			// 展开
+			commitItems.forEach((item, index) => {
+				if (index > 0) {
+					item.classList.remove('hidden');
+				}
+			});
+			expandText?.classList.add('hidden');
+			collapseText?.classList.remove('hidden');
+			arrow?.classList.add('rotate-180');
+		} else {
+			// 收起
+			commitItems.forEach((item, index) => {
+				if (index > 0) {
+					item.classList.add('hidden');
+				}
+			});
+			expandText?.classList.remove('hidden');
+			collapseText?.classList.add('hidden');
+			arrow?.classList.remove('rotate-180');
 		}
 	}
 	
-	document.addEventListener('DOMContentLoaded', () => {
-		const dateGroups = document.querySelectorAll('[id^="date-"]');
-		dateGroups.forEach((group) => {
-			const groupId = group.id;
-			const parts = groupId.split('-');
-			const dateIndex = parts[1];
-			const year = parts[2];
-			const month = parts[3];
-			
-			if (dateIndex !== '0') {
-				group.style.display = 'none';
-				const arrow = document.getElementById(`arrow-${groupId}`);
-				if (arrow) {
-					arrow.style.transform = 'rotate(-90deg)';
-				}
-			}
-		});
-	});
+	(window as any).toggleDayCommits = toggleDayCommits;
 </script>
 
 <style>
@@ -356,8 +360,8 @@ const jsonLd = {
 	animation: fadeIn 0.5s ease-out;
 }
 
-.date-group {
-	margin-bottom: 1rem;
+.month-group {
+	scroll-margin-top: 6rem;
 }
 
 @keyframes fadeIn {
@@ -369,5 +373,9 @@ const jsonLd = {
 		opacity: 1;
 		transform: translateY(0);
 	}
+}
+
+.collapsible .commit-item {
+	transition: all 0.3s ease;
 }
 </style>
