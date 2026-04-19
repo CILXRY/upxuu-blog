@@ -89,13 +89,11 @@
     async function showWelcomeToast() {
         if (hasShownToast) return;
         
-        // 等待所有数据加载完成
-        await Promise.all([fetchLocation(), fetchStats()]);
-        
-        console.log('🎉 欢迎弹窗数据已加载完成，准备显示');
+        console.log('🎉 开始显示加载动画');
         
         const toast = document.getElementById('welcome-toast');
         if (toast) {
+            // 先显示加载动画
             toast.style.display = 'block';
             setTimeout(() => {
                 toast.classList.remove('translate-y-full', 'opacity-0');
@@ -103,11 +101,18 @@
             }, 100);
             
             hasShownToast = true;
-            
-            setTimeout(() => {
-                closeWelcomeToast();
-            }, 5000);
         }
+        
+        // 等待数据加载完成
+        console.log('📡 正在加载数据...');
+        await Promise.all([fetchLocation(), fetchStats()]);
+        console.log('✅ 数据加载完成，开始计时 5 秒');
+        
+        // 数据加载完成后，5 秒后关闭
+        setTimeout(() => {
+            console.log('⏰ 时间到，关闭弹窗');
+            closeWelcomeToast();
+        }, 5000);
     }
     
     function shouldShowWelcome() {
