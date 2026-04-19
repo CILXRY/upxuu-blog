@@ -27,6 +27,16 @@ const commitInfo = await getLatestCommit();
                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
                     </svg>
                     <span class="font-medium">Latest commit:</span>
+                    <a 
+                        href={`https://github.com/ImUpXuu/myblog/commit/${commitInfo.sha}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-[var(--primary)] hover:underline font-mono"
+                    >
+                        {commitInfo.shortSha}
+                    </a>
+                    <span class="text-gray-400">·</span>
+                    <span>最后更新于</span>
                     <span>{formatDate(commitInfo.date)}</span>
                     <span class="text-gray-400">·</span>
                     <a 
