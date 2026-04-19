@@ -13,7 +13,7 @@ body:
         ## 申请要求
         - 原则上只收录个人博客
         - 内容需原创且有质量
-        - **请先在本站添加友链**（审核通过后会在这里显示）
+        - **请先在你的网站添加本站友链**
         
         ## 本站信息
         - **名称**: UpXuu
@@ -56,15 +56,6 @@ body:
       placeholder: "https://example.com/avatar.png"
     validations:
       required: false
-
-  - type: input
-    id: friend_url
-    attributes:
-      label: "友链页面 URL"
-      description: "你的网站上添加本站友链的页面链接（用于验证是否已添加）"
-      placeholder: "https://example.com/friends"
-    validations:
-      required: true
 
   - type: textarea
     id: additional_info

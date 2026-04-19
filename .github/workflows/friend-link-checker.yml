@@ -22,117 +22,80 @@ jobs:
           BODY="${{ github.event.issue.body }}"
           echo "$BODY"
           
-          # 提取网站名称
           NAME=$(echo "$BODY" | grep -A1 '### 网站名称' | tail -1 | sed 's/^ *//;s/\r$//')
-          # 提取网站描述
           DESC=$(echo "$BODY" | grep -A1 '### 网站描述' | tail -1 | sed 's/^ *//;s/\r$//')
-          # 提取网站链接
           URL=$(echo "$BODY" | grep -A1 '### 网站链接' | tail -1 | sed 's/^ *//;s/\r$//')
-          # 提取头像 URL
           AVATAR=$(echo "$BODY" | grep -A1 '### 网站头像 URL' | tail -1 | sed 's/^ *//;s/\r$//')
-          # 提取友链页面 URL
-          FRIEND_URL=$(echo "$BODY" | grep -A1 '### 友链页面 URL' | tail -1 | sed 's/^ *//;s/\r$//')
           
-          # 去除可能的引号
           NAME=$(echo "$NAME" | sed 's/^`//;s/`$//')
           DESC=$(echo "$DESC" | sed 's/^`//;s/`$//')
           URL=$(echo "$URL" | sed 's/^`//;s/`$//')
           AVATAR=$(echo "$AVATAR" | sed 's/^`//;s/`$//')
-          FRIEND_URL=$(echo "$FRIEND_URL" | sed 's/^`//;s/`$//')
           
           echo "name=$NAME" >> $GITHUB_OUTPUT
           echo "desc=$DESC" >> $GITHUB_OUTPUT
           echo "url=$URL" >> $GITHUB_OUTPUT
           echo "avatar=$AVATAR" >> $GITHUB_OUTPUT
-          echo "friend_url=$FRIEND_URL" >> $GITHUB_OUTPUT
-          echo "Issue 内容: 名称=$NAME, 描述=$DESC, 链接=$URL, 头像=$AVATAR, 友链页=$FRIEND_URL"
+          echo "Issue 内容: 名称=$NAME, 描述=$DESC, 链接=$URL, 头像=$AVATAR"
 
-      - name: 安装 Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: 安装 Playwright 依赖
+      - name: 安装 Playwright
         run: |
-          npm init -y > /dev/null 2>&1
+          rm -rf node_modules package-lock.json
+          npm init -y
           npm install playwright
           npx playwright install --with-deps chromium
 
       - name: 创建验证脚本
         run: |
-          cat > verify-friend-link.js << 'EOF'
+          cat > verify.js << 'EOF'
           const { chromium } = require('playwright');
           const fs = require('fs');
 
-          async function verifyFriendLink() {
-            const friendUrl = process.env.FRIEND_URL;
+          async function verify() {
+            const url = process.env.SITE_URL;
             
-            if (!friendUrl) {
-              console.error('错误: 未提供友链 URL');
+            if (!url) {
+              console.error('错误: 未提供网站 URL');
               fs.writeFileSync('/tmp/verify_result', 'fail');
               return;
             }
 
-            console.log('正在使用真实浏览器检查:', friendUrl);
+            console.log('正在检查:', url);
 
             const browser = await chromium.launch({ headless: true });
-            const context = await browser.newContext({
-              userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              viewport: { width: 1920, height: 1080 }
-            });
-
-            const page = await context.newPage();
+            const page = await browser.newPage();
 
             try {
-              await page.goto(friendUrl, { 
-                waitUntil: 'networkidle',
+              await page.goto(url, { 
+                waitUntil: 'domcontentloaded',
                 timeout: 30000 
               });
 
-              await page.waitForTimeout(3000);
-
               const content = await page.content();
 
-              const links = await page.evaluate(() => {
-                return Array.from(document.querySelectorAll('a')).map(a => a.href);
-              });
-
-              const allContent = content + '\n' + links.join('\n');
-
-              console.log('页面标题:', await page.title());
-              console.log('页面 URL:', page.url());
-
-              if (allContent.toLowerCase().includes('upxuu.com')) {
+              if (content.toLowerCase().includes('upxuu.com')) {
                 console.log('✅ 验证通过：找到 upxuu.com');
                 fs.writeFileSync('/tmp/verify_result', 'pass');
               } else {
                 console.log('❌ 验证失败：未找到 upxuu.com');
-                console.log('页面内容预览:', content.substring(0, 500));
                 fs.writeFileSync('/tmp/verify_result', 'fail');
               }
             } catch (error) {
-              console.error('浏览器访问失败:', error.message);
+              console.error('访问失败:', error.message);
               fs.writeFileSync('/tmp/verify_result', 'fail');
             } finally {
               await browser.close();
             }
           }
 
-          verifyFriendLink();
+          verify();
           EOF
 
-      - name: 使用真实浏览器验证友链页面
+      - name: 验证友链
         id: verify
-        run: |
-          echo "当前目录: $(pwd)"
-          echo "node_modules 是否存在: $(ls -d node_modules 2>/dev/null || echo '不存在')"
-          echo "playwright 是否存在: $(ls node_modules/playwright 2>/dev/null || echo '不存在')"
-          node verify-friend-link.js
-          RESULT=$(cat /tmp/verify_result)
-          echo "result=$RESULT" >> $GITHUB_OUTPUT
+        run: node verify.js
         env:
-          FRIEND_URL: ${{ steps.extract.outputs.friend_url }}
+          SITE_URL: ${{ steps.extract.outputs.url }}
 
       - name: 更新友链配置文件 (验证通过)
         if: steps.verify.outputs.result == 'pass'
@@ -144,7 +107,6 @@ jobs:
           
           echo "添加友链: $NAME - $URL"
           
-          # 使用 Python 更新 JSON
           python3 << 'PYTHON_SCRIPT'
           import json
           import sys
@@ -152,7 +114,6 @@ jobs:
           with open('public/data/friends.json', 'r', encoding='utf-8') as f:
             friends = json.load(f)
           
-          # 检查是否已存在
           name = """${{ steps.extract.outputs.name }}"""
           url = """${{ steps.extract.outputs.url }}"""
           
@@ -161,7 +122,6 @@ jobs:
               print(f"友链已存在: {url}")
               sys.exit(0)
           
-          # 添加新友链
           new_friend = {
             "name": name,
             "url": url,
@@ -224,23 +184,16 @@ jobs:
               repo: context.repo.repo,
               body: `## ⚠️ 友链申请需要修改
               
-              经真实浏览器检查，在你的友链页面中未找到 \`upxuu.com\`。
+              在你的网站中未找到 \`upxuu.com\`。
               
-              🔍 **验证信息**
-              - 友链页面：${{ steps.extract.outputs.friend_url }}
-              - 验证方式：真实浏览器访问（Playwright）
-              - 验证结果：未找到 \`upxuu.com\`
+              📝 **请先在你的网站添加本站友链**
               
-              📝 **请按以下步骤操作**
+              本站信息：
+              - **名称**: UpXuu
+              - **链接**: https://upxuu.com
+              - **头像**: https://upxuu.com/images/20260214145619.jpg
               
-              1. 在你的网站友链页面添加本站信息：
-                 - **名称**: UpXuu
-                 - **链接**: https://upxuu.com
-                 - **头像**: https://upxuu.com/images/20260214145619.jpg
-              
-              2. 确保友链页面可以正常访问
-              
-              3. 修改完成后，请**编辑此 Issue** 触发重新验证
+              添加完成后，请**编辑此 Issue** 触发重新验证。
               
               如有疑问，欢迎在评论区交流！🤝`
             })

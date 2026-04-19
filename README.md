@@ -26,7 +26,7 @@
 ### 申请流程
 
 1. **提交申请**: 在 [GitHub Issues](https://github.com/ImUpXuu/myblog/issues/new?template=friend-request.yml) 填写友链申请模板
-2. **自动验证**: GitHub Action 会自动爬取你的友链页面，检查是否包含 `upxuu.com`
+2. **自动验证**: GitHub Action 会访问你的网站，检查是否包含 `upxuu.com`
 3. **快速审核**:
    - ✅ **验证通过**: 自动更新 `friends.json` 并推送到仓库，Vercel 自动部署更新友链页面
    - ⚠️ **需要修改**: 自动回复 Issue，提示你需要先添加本站友链
@@ -43,8 +43,16 @@
 ### 技术实现
 
 - **数据源**: `public/data/friends.json` 存储所有友链数据
-- **自动化**: `.github/workflows/friend-link-checker.yml` 处理 Issue 并验证友链
+- **自动化**: `.github/workflows/friend-link-checker.yml` 处理 Issue 并验证友链（使用 curl 检查页面源码）
 - **模板**: `.github/ISSUE_TEMPLATE/friend-request.yml` 标准化申请格式
+
+---
+
+## 📅 更新日志
+
+### 2026-04-19
+- 友链验证改为 curl 方式，去掉 Playwright 依赖，速度更快更稳定
+- 优化友链申请表单，去掉"友链页面 URL"字段，只需在任意页面添加本站友链即可
 
 ---
 
