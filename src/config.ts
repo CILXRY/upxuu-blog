@@ -74,12 +74,12 @@ export const navBarConfig: NavBarConfig = {
 					url: "https://stats.upxuu.com/share/sFftlqBkgk2z9JM2",
 					external: true,
 				},
-				{
-					name: "开往",
-					url: "https://www.travellings.cn/go.html",
-					external: true,
-				},
 			],
+		},
+		{
+			name: "开往",
+			url: "https://www.travellings.cn/go.html",
+			external: true,
 		},
 		{
 			name: "友链",
