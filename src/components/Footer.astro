@@ -2,7 +2,7 @@
 
 import { profileConfig } from "../config";
 import { url } from "../utils/url-utils";
-import { getLatestCommit, formatRelativeTime } from "../utils/git-info";
+import { getLatestCommit, formatRelativeTime, formatDate } from "../utils/git-info";
 
 const currentYear = new Date().getFullYear();
 const commitInfo = await getLatestCommit();
@@ -34,7 +34,7 @@ const commitInfo = await getLatestCommit();
                     <span class="font-medium">Latest commit:</span>
                     <code class="bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded text-xs font-mono">{commitInfo.shortSha}</code>
                     <span class="text-gray-400">·</span>
-                    <span>{formatRelativeTime(commitInfo.date)}</span>
+                    <span>{formatDate(commitInfo.date)}</span>
                 </a>
                 <p class="text-gray-500 dark:text-gray-500 text-xs max-w-md truncate px-4">
                     {commitInfo.message}
