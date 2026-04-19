@@ -21,11 +21,17 @@ export async function getLatestCommit(): Promise<CommitInfo | null> {
 			next: { revalidate: 300 }
 		});
 
+		console.log('[GitInfo] Response status:', response.status);
+
 		if (!response.ok) {
-			throw new Error('Failed to fetch commit info');
+			const errorText = await response.text();
+			console.error('[GitInfo] API error:', response.status, errorText);
+			throw new Error(`Failed to fetch commit info: ${response.status}`);
 		}
 
 		const commits = await response.json();
+		console.log('[GitInfo] Commits data:', commits);
+		
 		if (commits && commits.length > 0) {
 			const commit = commits[0];
 			return {
@@ -38,7 +44,7 @@ export async function getLatestCommit(): Promise<CommitInfo | null> {
 		}
 		return null;
 	} catch (error) {
-		console.error('Error fetching git info:', error);
+		console.error('[GitInfo] Error fetching git info:', error);
 		return null;
 	}
 }

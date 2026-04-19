@@ -6,6 +6,9 @@ import { getLatestCommit, formatRelativeTime, formatDate } from "../utils/git-in
 
 const currentYear = new Date().getFullYear();
 const commitInfo = await getLatestCommit();
+
+// 调试日志
+console.log('[Footer] Commit info:', commitInfo);
 ---
 
 <!--<div class="border-t border-[var(&#45;&#45;primary)] mx-16 border-dashed py-8 max-w-[var(&#45;&#45;page-width)] flex flex-col items-center justify-center px-6">-->
