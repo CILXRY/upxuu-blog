@@ -22,22 +22,22 @@ const commitInfo = await getLatestCommit();
         <a class="transition link text-[var(--primary)] font-medium" target="_blank" href="https://icp.gov.moe/?keyword=20269996">萌 ICP 备 20269996 号</a>
         {commitInfo && (
             <div class="mt-3 flex flex-col items-center gap-1.5 text-xs px-4">
-                <a 
-                    href={`https://github.com/ImUpXuu/myblog/commit/${commitInfo.sha}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="flex flex-wrap items-center justify-center gap-2 text-gray-600 dark:text-gray-400 hover:text-[var(--primary)] transition-colors"
-                >
+                <div class="flex flex-wrap items-center justify-center gap-2 text-gray-600 dark:text-gray-400">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
                     </svg>
                     <span class="font-medium">Latest commit:</span>
-                    <code class="bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded text-xs font-mono flex-shrink-0">{commitInfo.shortSha}</code>
-                    <span class="text-gray-400">·</span>
                     <span>{formatDate(commitInfo.date)}</span>
-                </a>
+                    <span class="text-gray-400">·</span>
+                    <a 
+                        href="/diff"
+                        class="text-[var(--primary)] hover:underline"
+                    >
+                        更新日志
+                    </a>
+                </div>
                 <p class="text-gray-500 dark:text-gray-500 text-xs text-center break-words w-full">
-                    {commitInfo.message}
+                    更新内容：{commitInfo.message}
                 </p>
             </div>
         )}
