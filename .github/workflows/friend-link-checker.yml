@@ -51,58 +51,58 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
-      - name: 安装 Playwright 浏览器
+      - name: 安装 Playwright 依赖
         run: |
-          npm install -g playwright
-          npx playwright install chromium
-          npx playwright install-deps chromium
+          npm init -y > /dev/null 2>&1
+          npm install playwright
+          npx playwright install --with-deps chromium
 
-      - name: 使用真实浏览器验证友链页面
-        id: verify
+      - name: 创建验证脚本
         run: |
-          FRIEND_URL="${{ steps.extract.outputs.friend_url }}"
-          
-          echo "正在使用真实浏览器检查: $FRIEND_URL"
-          
-          # 使用 Playwright 创建真实浏览器访问
-          node << 'NODE_SCRIPT'
+          cat > verify-friend-link.js << 'EOF'
           const { chromium } = require('playwright');
           const fs = require('fs');
-          
-          (async () => {
+
+          async function verifyFriendLink() {
+            const friendUrl = process.env.FRIEND_URL;
+            
+            if (!friendUrl) {
+              console.error('错误: 未提供友链 URL');
+              fs.writeFileSync('/tmp/verify_result', 'fail');
+              return;
+            }
+
+            console.log('正在使用真实浏览器检查:', friendUrl);
+
             const browser = await chromium.launch({ headless: true });
             const context = await browser.newContext({
               userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
               viewport: { width: 1920, height: 1080 }
             });
-            
+
             const page = await context.newPage();
-            
+
             try {
-              // 访问友链页面
-              await page.goto(process.env.FRIEND_URL, { 
+              await page.goto(friendUrl, { 
                 waitUntil: 'networkidle',
                 timeout: 30000 
               });
-              
-              // 等待页面加载完成
+
               await page.waitForTimeout(3000);
-              
-              // 获取页面完整内容
+
               const content = await page.content();
-              
-              // 也获取所有链接的 href
+
               const links = await page.evaluate(() => {
                 return Array.from(document.querySelectorAll('a')).map(a => a.href);
               });
-              
+
               const allContent = content + '\n' + links.join('\n');
-              
+
               console.log('页面标题:', await page.title());
               console.log('页面 URL:', page.url());
-              
-              // 检查是否包含 upxuu.com
+
               if (allContent.toLowerCase().includes('upxuu.com')) {
                 console.log('✅ 验证通过：找到 upxuu.com');
                 fs.writeFileSync('/tmp/verify_result', 'pass');
@@ -117,9 +117,18 @@ jobs:
             } finally {
               await browser.close();
             }
-          })();
-          NODE_SCRIPT
-          
+          }
+
+          verifyFriendLink();
+          EOF
+
+      - name: 使用真实浏览器验证友链页面
+        id: verify
+        run: |
+          echo "当前目录: $(pwd)"
+          echo "node_modules 是否存在: $(ls -d node_modules 2>/dev/null || echo '不存在')"
+          echo "playwright 是否存在: $(ls node_modules/playwright 2>/dev/null || echo '不存在')"
+          node verify-friend-link.js
           RESULT=$(cat /tmp/verify_result)
           echo "result=$RESULT" >> $GITHUB_OUTPUT
         env:
