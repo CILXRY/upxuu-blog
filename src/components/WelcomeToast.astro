@@ -106,7 +106,9 @@
     }
     
     function shouldShowWelcome() {
-        return !sessionStorage.getItem(VISIT_SESSION_KEY);
+        // 临时禁用，每次都显示，方便测试
+        return true;
+        // return !sessionStorage.getItem(VISIT_SESSION_KEY);
     }
     
     function markAsVisited() {
