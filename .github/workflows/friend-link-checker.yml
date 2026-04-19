@@ -175,7 +175,7 @@ jobs:
             echo "友链已存在，无需更新"
           fi
 
-      - name: 回复 Issue - 验证通过
+      - name: 回复 Issue - 验证通过并关闭
         if: steps.verify.outputs.result == 'pass'
         uses: actions/github-script@v7
         with:
@@ -196,8 +196,14 @@ jobs:
               
               感谢支持！🎉`
             })
+            github.rest.issues.update({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'closed'
+            })
 
-      - name: 回复 Issue - 验证失败
+      - name: 回复 Issue - 验证失败并关闭
         if: steps.verify.outputs.result == 'fail'
         uses: actions/github-script@v7
         with:
@@ -206,18 +212,20 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## ⚠️ 友链申请需要修改
+              body: `## ❌ 友链申请未通过
               
-              在你的友链页面中未找到 \`upxuu.com\`。
+              在你的网站中未找到 \`upxuu.com\`，请检查是否已正确添加本站友链。
               
-              📝 **请先在你的网站友链页面添加本站**
+              📝 **本站信息**
+              - 名称: UpXuu
+              - 链接: https://upxuu.com
+              - 头像: https://upxuu.com/images/20260214145619.jpg
               
-              本站信息：
-              - **名称**: UpXuu
-              - **链接**: https://upxuu.com
-              - **头像**: https://upxuu.com/images/20260214145619.jpg
-              
-              添加完成后，请**编辑此 Issue** 触发重新验证。
-              
-              如有疑问，欢迎在评论区交流！🤝`
+              如需重新申请，请修改后新建 Issue。`
+            })
+            github.rest.issues.update({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'closed'
             })
