@@ -10,12 +10,41 @@
 
 - ✅ SEO 优化：集成 [astro-seo](https://github.com/jonasmerlin/astro-seo) 插件
 - ✅ JSON-LD 结构化数据：支持文章、关于页面、归档页面等
-- ✅ 友链页面：支持友链申请和展示
+- ✅ 友链页面：支持友链申请和展示，自动化审核流程
 - ✅ 移动端优化：完善响应式设计
 - ✅ 评论功能：集成评论 SDK
 - ✅ Commit 信息展示：页脚显示最新 Git commit 信息
 - ✅ 页面过渡：使用 Swup 实现平滑页面切换
 - ✅ 欢迎弹窗：首次访问显示地理位置欢迎信息
+- ✅ 开往集成：加入 [Travellings](https://www.travellings.cn/) 友链接力计划
+- ✅ 更新日志页面：展示完整的 Git commit 历史
+
+## 🤝 友链申请
+
+本站支持**自动化友链申请**流程，基于 GitHub Issue 和 GitHub Action：
+
+### 申请流程
+
+1. **提交申请**: 在 [GitHub Issues](https://github.com/ImUpXuu/myblog/issues/new?template=friend-request.yml) 填写友链申请模板
+2. **自动验证**: GitHub Action 会自动爬取你的友链页面，检查是否包含 `upxuu.com`
+3. **快速审核**:
+   - ✅ **验证通过**: 自动更新 `friends.json` 并推送到仓库，Vercel 自动部署更新友链页面
+   - ⚠️ **需要修改**: 自动回复 Issue，提示你需要先添加本站友链
+
+### 本站友链信息
+
+```yaml
+名称: UpXuu
+链接: https://upxuu.com
+头像: https://upxuu.com/images/20260214145619.jpg
+描述: 逐光而上
+```
+
+### 技术实现
+
+- **数据源**: `public/data/friends.json` 存储所有友链数据
+- **自动化**: `.github/workflows/friend-link-checker.yml` 处理 Issue 并验证友链
+- **模板**: `.github/ISSUE_TEMPLATE/friend-request.yml` 标准化申请格式
 
 ---
 

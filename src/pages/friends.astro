@@ -2,9 +2,7 @@
 import MainGridLayout from "../layouts/MainGridLayout.astro";
 import BannerTitle from "../components/BannerTitle.astro";
 import { profileConfig, siteConfig } from "../config";
-
-// 从 JSON 文件读取友链数据
-const friendsData = await fetch(new URL('/data/friends.json', import.meta.url)).then(res => res.json());
+import friendsData from "../../public/data/friends.json";
 
 // 添加自己的信息到首位
 const friends = [
