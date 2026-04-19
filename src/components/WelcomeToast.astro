@@ -69,8 +69,8 @@
             const response = await fetch('https://upxuu.com/statsapi/alltime');
             const data = await response.json();
             
-            if (data && data.visits !== undefined) {
-                const statsText = `欢迎 我是 UpXuu 你是本站迎来的第${data.visits}次访问`;
+            if (data && data.pageviews !== undefined) {
+                const statsText = `欢迎 我是 UpXuu 你是本站迎来的第${data.pageviews}次访问`;
                 
                 const statsEl = document.getElementById('welcome-stats');
                 if (statsEl) {
