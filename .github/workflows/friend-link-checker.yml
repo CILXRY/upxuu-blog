@@ -1,4 +1,4 @@
-name: 🤝 友链申请自动处理
+name: Friend Link Checker
 
 on:
   issues:
