@@ -20,13 +20,21 @@ jobs:
         id: extract
         run: |
           BODY="${{ github.event.issue.body }}"
+          echo "=== Issue Body ==="
           echo "$BODY"
+          echo "=================="
           
-          NAME=$(echo "$BODY" | grep -A1 '### 网站名称' | tail -1 | sed 's/^ *//;s/\r$//')
-          DESC=$(echo "$BODY" | grep -A1 '### 网站描述' | tail -1 | sed 's/^ *//;s/\r$//')
-          URL=$(echo "$BODY" | grep -A1 '### 网站链接' | tail -1 | sed 's/^ *//;s/\r$//')
-          AVATAR=$(echo "$BODY" | grep -A1 '### 网站头像 URL' | tail -1 | sed 's/^ *//;s/\r$//')
-          FRIEND_URL=$(echo "$BODY" | grep -A1 '### 友链页面 URL' | tail -1 | sed 's/^ *//;s/\r$//')
+          NAME=$(echo "$BODY" | awk '/### 网站名称/{getline; getline; print}' | sed 's/^ *//;s/\r$//')
+          DESC=$(echo "$BODY" | awk '/### 网站描述/{getline; getline; print}' | sed 's/^ *//;s/\r$//')
+          URL=$(echo "$BODY" | awk '/### 网站链接/{getline; getline; print}' | sed 's/^ *//;s/\r$//')
+          AVATAR=$(echo "$BODY" | awk '/### 网站头像 URL/{getline; getline; print}' | sed 's/^ *//;s/\r$//')
+          FRIEND_URL=$(echo "$BODY" | awk '/### 友链页面 URL/{getline; getline; print}' | sed 's/^ *//;s/\r$//')
+          
+          [ "$NAME" = "No response" ] && NAME=""
+          [ "$DESC" = "No response" ] && DESC=""
+          [ "$URL" = "No response" ] && URL=""
+          [ "$AVATAR" = "No response" ] && AVATAR=""
+          [ "$FRIEND_URL" = "No response" ] && FRIEND_URL=""
           
           NAME=$(echo "$NAME" | sed 's/^`//;s/`$//')
           DESC=$(echo "$DESC" | sed 's/^`//;s/`$//')
@@ -34,16 +42,21 @@ jobs:
           AVATAR=$(echo "$AVATAR" | sed 's/^`//;s/`$//')
           FRIEND_URL=$(echo "$FRIEND_URL" | sed 's/^`//;s/`$//')
           
+          echo "提取结果: name=[$NAME] desc=[$DESC] url=[$URL] avatar=[$AVATAR] friend_url=[$FRIEND_URL]"
+          
           echo "name=$NAME" >> $GITHUB_OUTPUT
           echo "desc=$DESC" >> $GITHUB_OUTPUT
           echo "url=$URL" >> $GITHUB_OUTPUT
           echo "avatar=$AVATAR" >> $GITHUB_OUTPUT
           echo "friend_url=$FRIEND_URL" >> $GITHUB_OUTPUT
-          echo "Issue 内容: 名称=$NAME, 描述=$DESC, 链接=$URL, 头像=$AVATAR, 友链页=$FRIEND_URL"
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
       - name: 安装 Playwright
         run: |
-          rm -rf node_modules package-lock.json
           npm init -y
           npm install playwright
           npx playwright install --with-deps chromium
@@ -56,10 +69,11 @@ jobs:
 
           async function verify() {
             let verifyUrl = process.env.FRIEND_URL;
+            if (verifyUrl) verifyUrl = verifyUrl.trim();
             
             if (!verifyUrl) {
-              console.log('未填写友链页面 URL，使用网站首页验证');
               verifyUrl = process.env.SITE_URL;
+              if (verifyUrl) verifyUrl = verifyUrl.trim();
             }
 
             if (!verifyUrl) {
@@ -71,7 +85,10 @@ jobs:
             console.log('正在检查:', verifyUrl);
 
             const browser = await chromium.launch({ headless: true });
-            const page = await browser.newPage();
+            const context = await browser.newContext({
+              userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            });
+            const page = await context.newPage();
 
             try {
               await page.goto(verifyUrl, { 
@@ -80,8 +97,14 @@ jobs:
               });
 
               const content = await page.content();
+              console.log('实际访问地址:', page.url());
 
-              if (content.toLowerCase().includes('upxuu.com')) {
+              const allLinks = await page.evaluate(() => {
+                return Array.from(document.querySelectorAll('a[href]')).map(a => a.href);
+              });
+              const linksText = allLinks.join('\n');
+
+              if (content.toLowerCase().includes('upxuu.com') || linksText.toLowerCase().includes('upxuu.com')) {
                 console.log('✅ 验证通过：找到 upxuu.com');
                 fs.writeFileSync('/tmp/verify_result', 'pass');
               } else {
@@ -109,16 +132,8 @@ jobs:
       - name: 更新友链配置文件 (验证通过)
         if: steps.verify.outputs.result == 'pass'
         run: |
-          NAME="${{ steps.extract.outputs.name }}"
-          DESC="${{ steps.extract.outputs.desc }}"
-          URL="${{ steps.extract.outputs.url }}"
-          AVATAR="${{ steps.extract.outputs.avatar }}"
-          
-          echo "添加友链: $NAME - $URL"
-          
           python3 << 'PYTHON_SCRIPT'
-          import json
-          import sys
+          import json, sys
           
           with open('public/data/friends.json', 'r', encoding='utf-8') as f:
             friends = json.load(f)
