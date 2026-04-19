@@ -3,23 +3,12 @@ import MainGridLayout from "../layouts/MainGridLayout.astro";
 import BannerTitle from "../components/BannerTitle.astro";
 import { profileConfig, siteConfig } from "../config";
 
-interface FileChange {
-	filename: string;
-	additions: number;
-	deletions: number;
-	changes: number;
-	status: 'added' | 'removed' | 'modified' | 'renamed';
-}
-
 interface Commit {
 	sha: string;
 	shortSha: string;
 	date: string;
 	message: string;
 	author: string;
-	files?: FileChange[];
-	additions?: number;
-	deletions?: number;
 }
 
 async function getCommitHistory(): Promise<Commit[]> {
@@ -49,33 +38,6 @@ async function getCommitHistory(): Promise<Commit[]> {
 	}
 }
 
-async function getCommitFiles(sha: string): Promise<FileChange[]> {
-	try {
-		const response = await fetch(`https://api.github.com/repos/ImUpXuu/myblog/commits/${sha}`, {
-			headers: {
-				'Accept': 'application/vnd.github.v3+json',
-			},
-			next: { revalidate: 3600 }
-		});
-
-		if (!response.ok) {
-			return [];
-		}
-
-		const data = await response.json();
-		return data.files.map((file: any) => ({
-			filename: file.filename,
-			additions: file.additions,
-			deletions: file.deletions,
-			changes: file.changes,
-			status: file.status
-		}));
-	} catch (error) {
-		console.error('Error fetching commit files:', error);
-		return [];
-	}
-}
-
 function formatDate(dateString: string): string {
 	const date = new Date(dateString);
 	date.setHours(date.getHours() + 8);
@@ -89,14 +51,6 @@ function formatDate(dateString: string): string {
 }
 
 const commits = await getCommitHistory();
-const commitsWithFiles = await Promise.all(
-	commits.map(async (commit) => {
-		const files = await getCommitFiles(commit.sha);
-		const additions = files.reduce((sum, file) => sum + file.additions, 0);
-		const deletions = files.reduce((sum, file) => sum + file.deletions, 0);
-		return { ...commit, files, additions, deletions };
-	})
-);
 
 const jsonLd = {
 	"@context": "https://schema.org",
@@ -129,103 +83,38 @@ const jsonLd = {
 			</div>
 			
 			<div class="commit-timeline relative">
-				{commitsWithFiles.map((commit, index) => {
-					const addedFiles = commit.files?.filter(f => f.status === 'added').length || 0;
-					const modifiedFiles = commit.files?.filter(f => f.status === 'modified').length || 0;
-					const removedFiles = commit.files?.filter(f => f.status === 'removed').length || 0;
-					
-					return (
-						<div class="commit-item relative pl-8 pb-8 last:pb-0">
-							{index !== commitsWithFiles.length - 1 && (
-								<div class="absolute left-3 top-8 bottom-0 w-0.5 bg-gradient-to-b from-blue-300 to-blue-100 dark:from-blue-700 dark:to-blue-900"></div>
-							)}
-							<div class="absolute left-0 top-2 w-6 h-6 rounded-full bg-blue-500 border-4 border-white dark:border-gray-800 shadow-md"></div>
-							
-							<div class="bg-white dark:bg-gray-800/50 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-								<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-									<div class="flex items-center gap-2 flex-wrap">
-										<a 
-											href={`https://github.com/ImUpXuu/myblog/commit/${commit.sha}`}
-											target="_blank"
-											rel="noopener noreferrer"
-											class="text-sm font-mono text-blue-600 dark:text-blue-400 hover:underline"
-										>
-											{commit.shortSha}
-										</a>
-										<span class="text-xs text-gray-500 dark:text-gray-400">
-											{formatDate(commit.date)}
-										</span>
-									</div>
+				{commits.map((commit, index) => (
+					<div class="commit-item relative pl-8 pb-8 last:pb-0">
+						{index !== commits.length - 1 && (
+							<div class="absolute left-3 top-8 bottom-0 w-0.5 bg-gradient-to-b from-blue-300 to-blue-100 dark:from-blue-700 dark:to-blue-900"></div>
+						)}
+						<div class="absolute left-0 top-2 w-6 h-6 rounded-full bg-blue-500 border-4 border-white dark:border-gray-800 shadow-md"></div>
+						
+						<div class="bg-white dark:bg-gray-800/50 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+							<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+								<div class="flex items-center gap-2 flex-wrap">
+									<a 
+										href={`https://github.com/ImUpXuu/myblog/commit/${commit.sha}`}
+										target="_blank"
+										rel="noopener noreferrer"
+										class="text-sm font-mono text-blue-600 dark:text-blue-400 hover:underline"
+									>
+										{commit.shortSha}
+									</a>
 									<span class="text-xs text-gray-500 dark:text-gray-400">
-										by {commit.author}
+										{formatDate(commit.date)}
 									</span>
 								</div>
-								<p class="text-gray-700 dark:text-gray-300 text-sm mb-3">
-									{commit.message}
-								</p>
-								
-								{(addedFiles > 0 || modifiedFiles > 0 || removedFiles > 0 || commit.additions! > 0 || commit.deletions! > 0) && (
-									<div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-										<div class="flex items-center gap-3 mb-2 flex-wrap">
-											{addedFiles > 0 && (
-												<span class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded">
-													🟢 +{addedFiles}
-												</span>
-											)}
-											{modifiedFiles > 0 && (
-												<span class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded">
-													🟡 ~{modifiedFiles}
-												</span>
-											)}
-											{removedFiles > 0 && (
-												<span class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded">
-													🔴 -{removedFiles}
-												</span>
-											)}
-											{commit.additions! > 0 && (
-												<span class="text-xs text-green-600 dark:text-green-400">
-													+{commit.additions}
-												</span>
-											)}
-											{commit.deletions! > 0 && (
-												<span class="text-xs text-red-600 dark:text-red-400">
-													-{commit.deletions}
-												</span>
-											)}
-										</div>
-										
-										{commit.files && commit.files.length > 0 && (
-											<div class="max-h-40 overflow-y-auto space-y-1.5 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
-												{commit.files.map((file, fileIndex) => (
-													<div 
-														key={fileIndex}
-														class="flex items-center justify-between text-xs p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-													>
-														<span class="font-mono text-gray-700 dark:text-gray-300 truncate flex-1" title={file.filename}>
-															{file.filename}
-														</span>
-														<div class="flex items-center gap-2 ml-4 flex-shrink-0">
-															{file.additions > 0 && (
-																<span class="text-green-600 dark:text-green-400 font-mono">
-																	+{file.additions}
-																</span>
-															)}
-															{file.deletions > 0 && (
-																<span class="text-red-600 dark:text-red-400 font-mono">
-																	-{file.deletions}
-																</span>
-															)}
-														</div>
-													</div>
-												))}
-											</div>
-										)}
-									</div>
-								)}
+								<span class="text-xs text-gray-500 dark:text-gray-400">
+									by {commit.author}
+								</span>
 							</div>
+							<p class="text-gray-700 dark:text-gray-300 text-sm">
+								{commit.message}
+							</p>
 						</div>
-					);
-				})}
+					</div>
+				))}
 			</div>
 			
 			{commits.length === 0 && (
