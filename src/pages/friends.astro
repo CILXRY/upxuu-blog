@@ -3,7 +3,10 @@ import MainGridLayout from "../layouts/MainGridLayout.astro";
 import BannerTitle from "../components/BannerTitle.astro";
 import { profileConfig, siteConfig } from "../config";
 
-// 友链数据配置
+// 从 JSON 文件读取友链数据
+const friendsData = await fetch(new URL('/data/friends.json', import.meta.url)).then(res => res.json());
+
+// 添加自己的信息到首位
 const friends = [
 	{
 		name: "UpXuu",
@@ -11,103 +14,7 @@ const friends = [
 		url: "https://upxuu.com",
 		description: "逐光而上"
 	},
-	{
-		name: "LsAng",
-		url: "https://llds.cloud",
-		avatar: "https://llds.cloud/lsang.png",
-		description: "学习、探索中",
-	},
-	{
-		name: "流欺の个人博客",
-		url: "https://blog.lqay.cn/",
-		avatar: "https://tc.lqay.cn/LightPicture/2026/03/5f64e0f0f361e19c.png",
-		description: "嗯对就是个博客"
-	},
-	{
-		name: "zplb の博客",
-		url: "https://blog.zplb.top",
-		avatar: "https://zplb.org.cn/images/zplb.png",
-		description: "一个喜欢网安的学生~"
-	},
-	{
-		name: "石猫博客~",
-		url: "https://imshimao.com",
-		avatar: "",
-		description: ""
-	},
-	{
-		name: "巳忆笔记",
-		url: "https://lleft.cn/",
-		avatar: "https://tc.lleft.cn/PicGo/logo.png",
-		description: "记住所有美好回忆"
-	},
-	{
-		name: "zeroanon",
-		url: "https://zeroanon.com",
-		avatar: "https://avatars.githubusercontent.com/u/119206123?v=4",
-		description: "不做圣经里腐朽的诗集，要做禁书里最惊世骇俗的篇章"
-	},
-	{
-		name: "NGC7293的星域",
-		url: "https://xmk.life/",
-		avatar: "https://xmk.life/ngc7293.png",
-		description: "博客"
-	},
-	{
-		name: "瓶中虾",
-		url: "https://weiyu14.top",
-		avatar: "https://weiyu14.top/assets/ava-e842524e.jpg",
-		description: "只闻花香 不争朝夕"
-	},
-	{
-		name: "ChenServer",
-		url: "https://etaris.moe",
-		avatar: "https://cn.cravatar.com/avatar/f9ff0db2d48c61f21a01f31de18643c2?d=mp&s=240",
-		description: "🤔"
-	},
-	{
-		name: "沐光橙香",
-		url: "https://mugcx.com",
-		avatar: "https://mugcx.com/logo.png",
-		description: "暖阳旧时光，草木亦生香"
-	},
-	{
-		name: "无大人生",
-		url: "https://blog.wudarensheng.top/",
-		avatar: "https://q2.qlogo.cn/headimg_dl?dst_uin=3574552394&spec=0",
-		description: "远赴人间惊鸿宴，一睹人间盛世颜。"
-	},
-	{
-		name: "ziworld",
-		url: "https://blog.ziworld.top",
-		avatar: "https://blog.ziworld.top/assect/images/avatar.webp",
-		description: "For all time, always."
-	},
-	{
-		name: "爱琉璃",
-		url: "https://www.illlt.com/",
-		avatar: "",
-		description: ""
-	},
-	{
-		name: "桃花源 TYC",
-		url: "https://www.ty2c.com/",
-		avatar: "",
-		description: ""
-	},
-	{
-		name: "QgxsのBlog",
-		url: "https://www.20210701.xyz/",
-		avatar: "https://www.20210701.xyz/icon.jpeg",
-		description: "放松心情，漫游四处，处处美景。"
-	},
-	{
-		name: "涵哲子居",
-		url: "https://afipo.top",
-		avatar: "https://afipo.top/logo.png",
-		description: "天哲地理，共公卿好"
-	},
-	// 在这里添加更多友链...
+	...friendsData
 ];
 
 const jsonLd = {
