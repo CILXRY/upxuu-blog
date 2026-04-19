@@ -1,4 +1,4 @@
-name: 🤝 友链申请处理
+name: 🤝 友链申请自动处理
 
 on:
   issues:
@@ -6,7 +6,7 @@ on:
 
 jobs:
   process-friend-request:
-    if: contains(github.event.issue.labels.*.name, '友链申请')
+    if: contains(github.event.issue.title, '友链申请')
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -15,159 +15,155 @@ jobs:
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
 
-      - name: 解析 Issue 内容
-        id: parse
+      - name: 提取 Issue 内容
+        id: extract
         run: |
           BODY="${{ github.event.issue.body }}"
+          echo "$BODY"
           
-          # 使用 grep 和 sed 提取字段
-          NAME=$(echo "$BODY" | grep -A1 "网站名称" | tail -1 | sed 's/^.*: //;s/\r$//')
-          DESCRIPTION=$(echo "$BODY" | grep -A1 "网站描述" | tail -1 | sed 's/^.*: //;s/\r$//')
-          URL=$(echo "$BODY" | grep -A1 "网站链接" | tail -1 | sed 's/^.*: //;s/\r$//')
-          AVATAR=$(echo "$BODY" | grep -A1 "网站头像 URL" | tail -1 | sed 's/^.*: //;s/\r$//')
-          FRIEND_URL=$(echo "$BODY" | grep -A1 "友链页面 URL" | tail -1 | sed 's/^.*: //;s/\r$//')
+          # 提取网站名称
+          NAME=$(echo "$BODY" | grep -A1 '### 网站名称' | tail -1 | sed 's/^ *//;s/\r$//')
+          # 提取网站描述
+          DESC=$(echo "$BODY" | grep -A1 '### 网站描述' | tail -1 | sed 's/^ *//;s/\r$//')
+          # 提取网站链接
+          URL=$(echo "$BODY" | grep -A1 '### 网站链接' | tail -1 | sed 's/^ *//;s/\r$//')
+          # 提取头像 URL
+          AVATAR=$(echo "$BODY" | grep -A1 '### 网站头像 URL' | tail -1 | sed 's/^ *//;s/\r$//')
+          # 提取友链页面 URL
+          FRIEND_URL=$(echo "$BODY" | grep -A1 '### 友链页面 URL' | tail -1 | sed 's/^ *//;s/\r$//')
           
-          echo "NAME=$NAME" >> $GITHUB_OUTPUT
-          echo "DESCRIPTION=$DESCRIPTION" >> $GITHUB_OUTPUT
-          echo "URL=$URL" >> $GITHUB_OUTPUT
-          echo "AVATAR=$AVATAR" >> $GITHUB_OUTPUT
-          echo "FRIEND_URL=$FRIEND_URL" >> $GITHUB_OUTPUT
+          echo "name=$NAME" >> $GITHUB_OUTPUT
+          echo "desc=$DESC" >> $GITHUB_OUTPUT
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "avatar=$AVATAR" >> $GITHUB_OUTPUT
+          echo "friend_url=$FRIEND_URL" >> $GITHUB_OUTPUT
+          echo "Issue 内容: 名称=$NAME, 描述=$DESC, 链接=$URL, 头像=$AVATAR, 友链页=$FRIEND_URL"
 
-      - name: 检查友链页面是否包含 upxuu.com
-        id: check
+      - name: 验证友链页面是否包含 upxuu.com
+        id: verify
         run: |
-          FRIEND_URL="${{ steps.parse.outputs.FRIEND_URL }}"
+          FRIEND_URL="${{ steps.extract.outputs.friend_url }}"
           
-          if [ -z "$FRIEND_URL" ]; then
-            echo "VALID=false" >> $GITHUB_OUTPUT
-            echo "REASON=友链页面 URL 未填写" >> $GITHUB_OUTPUT
-            exit 0
-          fi
+          echo "正在检查: $FRIEND_URL"
           
-          # 检查 URL 格式
-          if ! [[ $FRIEND_URL =~ ^https?:// ]]; then
-            echo "VALID=false" >> $GITHUB_OUTPUT
-            echo "REASON=友链页面 URL 格式不正确，请以 https:// 开头" >> $GITHUB_OUTPUT
-            exit 0
-          fi
+          # 获取友链页面内容
+          PAGE_CONTENT=$(curl -s -L "$FRIEND_URL" -H "User-Agent: Mozilla/5.0" 2>/dev/null || echo "")
           
-          # 检查网页内容是否包含 upxuu.com
-          CONTENT=$(curl -s -L "$FRIEND_URL" 2>/dev/null || echo "")
-          
-          if echo "$CONTENT" | grep -q "upxuu.com"; then
-            echo "VALID=true" >> $GITHUB_OUTPUT
+          if echo "$PAGE_CONTENT" | grep -qi "upxuu.com"; then
+            echo "✅ 验证通过：找到 upxuu.com"
+            echo "result=pass" >> $GITHUB_OUTPUT
           else
-            echo "VALID=false" >> $GITHUB_OUTPUT
-            echo "REASON=未在友链页面中找到 upxuu.com，请先添加本站友链后再提交申请" >> $GITHUB_OUTPUT
+            echo "❌ 验证失败：未找到 upxuu.com"
+            echo "result=fail" >> $GITHUB_OUTPUT
           fi
 
-      - name: 验证通过 - 更新友链列表
-        if: steps.check.outputs.VALID == 'true'
+      - name: 更新友链配置文件 (验证通过)
+        if: steps.verify.outputs.result == 'pass'
         run: |
-          NAME="${{ steps.parse.outputs.NAME }}"
-          DESCRIPTION="${{ steps.parse.outputs.DESCRIPTION }}"
-          URL="${{ steps.parse.outputs.URL }}"
-          AVATAR="${{ steps.parse.outputs.AVATAR || '' }}"
+          NAME="${{ steps.extract.outputs.name }}"
+          DESC="${{ steps.extract.outputs.desc }}"
+          URL="${{ steps.extract.outputs.url }}"
+          AVATAR="${{ steps.extract.outputs.avatar }}"
           
-          # 确保 URL 以 / 结尾
-          if [[ $URL != */ ]]; then
-            URL="$URL/"
-          fi
+          echo "添加友链: $NAME - $URL"
           
-          # 创建新的友链 JSON 对象
-          NEW_ENTRY="  {
-    \"name\": \"$NAME\",
-    \"url\": \"$URL\",
-    \"avatar\": \"$AVATAR\",
-    \"description\": \"$DESCRIPTION\"
-  }"
+          # 使用 Python 更新 JSON
+          python3 << 'PYTHON_SCRIPT'
+          import json
+          import sys
           
-          # 读取现有的 friends.json
-          FRIENDS_FILE="myblog/public/data/friends.json"
+          with open('public/data/friends.json', 'r', encoding='utf-8') as f:
+            friends = json.load(f)
           
-          # 使用 Python 处理 JSON（更可靠）
-          python3 -c "
-import json
-import sys
+          # 检查是否已存在
+          name = """${{ steps.extract.outputs.name }}"""
+          url = """${{ steps.extract.outputs.url }}"""
+          
+          for friend in friends:
+            if friend['url'].rstrip('/') == url.rstrip('/'):
+              print(f"友链已存在: {url}")
+              sys.exit(0)
+          
+          # 添加新友链
+          new_friend = {
+            "name": name,
+            "url": url,
+            "avatar": """${{ steps.extract.outputs.avatar }}""",
+            "description": """${{ steps.extract.outputs.desc }}"""
+          }
+          friends.append(new_friend)
+          
+          with open('public/data/friends.json', 'w', encoding='utf-8') as f:
+            json.dump(friends, f, ensure_ascii=False, indent=2)
+          
+          print("✅ 友链已添加")
+          PYTHON_SCRIPT
 
-with open('$FRIENDS_FILE', 'r', encoding='utf-8') as f:
-    friends = json.load(f)
-
-# 检查是否已存在
-for friend in friends:
-    if friend['url'].rstrip('/') == '${URL//\//\\/}'.rstrip('/'):
-        print('DUPLICATE=true')
-        sys.exit(0)
-
-# 添加新友链
-new_friend = {
-    'name': '$NAME',
-    'url': '$URL',
-    'avatar': '$AVATAR',
-    'description': '$DESCRIPTION'
-}
-friends.append(new_friend)
-
-with open('$FRIENDS_FILE', 'w', encoding='utf-8') as f:
-    json.dump(friends, f, ensure_ascii=False, indent=2)
-
-print('DUPLICATE=false')
-"
-
-      - name: 提交友链更新
-        if: steps.check.outputs.VALID == 'true'
+      - name: 提交并推送 (验证通过)
+        if: steps.verify.outputs.result == 'pass'
         run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add myblog/public/data/friends.json
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/data/friends.json
           
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "feat: 添加友链 ${{ steps.parse.outputs.NAME }} (#${{ github.event.issue.number }})"
+          if ! git diff --cached --quiet; then
+            git commit -m "feat: 添加友链 ${{ steps.extract.outputs.name }}"
             git push
+            echo "✅ 已提交并推送"
+          else
+            echo "友链已存在，无需更新"
           fi
 
       - name: 回复 Issue - 验证通过
-        if: steps.check.outputs.VALID == 'true'
-        run: |
-          gh issue comment ${{ github.event.issue.number }} \
-            --body "## ✅ 友链申请已通过！
-          
-          感谢您的申请，友链已添加到我们的列表中。
-          
-          **网站名称**: ${{ steps.parse.outputs.NAME }}
-          **网站链接**: ${{ steps.parse.outputs.URL }}
-          
-          由于 Vercel 自动部署，更新将在几分钟内生效。
-          
-          感谢支持！🎉"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: steps.verify.outputs.result == 'pass'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ✅ 友链申请已通过！
+              
+              感谢申请！友链已成功添加到列表中。
+              
+              📋 **友链信息**
+              - 名称：${{ steps.extract.outputs.name }}
+              - 链接：${{ steps.extract.outputs.url }}
+              
+               Vercel 将自动重新部署，几分钟内更新生效。
+              
+              感谢支持！🎉`
+            })
 
       - name: 回复 Issue - 验证失败
-        if: steps.check.outputs.VALID == 'false'
-        run: |
-          gh issue comment ${{ github.event.issue.number }} \
-            --body "## ⚠️ 友链申请需要修改
-          
-          ${{ steps.check.outputs.REASON }}
-          
-          **请按照以下步骤操作：**
-          
-          1. 在本站友链页面添加我们的信息：
-             - **名称**: UpXuu
-             - **链接**: https://upxuu.com
-             - **头像**: https://upxuu.com/images/20260214145619.jpg
-          
-          2. 确保友链页面可以正常访问并包含 upxuu.com
-          
-          3. 重新提交 Issue 或关闭后重新申请
-          
-          如有疑问，欢迎在评论区交流！🤝"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: steps.verify.outputs.result == 'fail'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ⚠️ 友链申请需要修改
+              
+              经检查，在你的友链页面中未找到 \`upxuu.com\`。
+              
+              🔍 **验证信息**
+              - 友链页面：${{ steps.extract.outputs.friend_url }}
+              - 验证结果：未找到 \`upxuu.com\`
+              
+              📝 **请按以下步骤操作**
+              
+              1. 在你的网站友链页面添加本站信息：
+                 - **名称**: UpXuu
+                 - **链接**: https://upxuu.com
+                 - **头像**: https://upxuu.com/images/20260214145619.jpg
+              
+              2. 确保友链页面可以正常访问
+              
+              3. 修改完成后，请回复此 Issue 告知我们重新验证
+              
+              如有疑问，欢迎在评论区交流！🤝`
+            })
