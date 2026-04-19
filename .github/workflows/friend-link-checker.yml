@@ -19,16 +19,15 @@ jobs:
       - name: 提取 Issue 内容
         id: extract
         run: |
-          BODY="${{ github.event.issue.body }}"
-          echo "=== Issue Body ==="
-          echo "$BODY"
-          echo "=================="
+          echo "${{ github.event.issue.body }}" > /tmp/issue_body.txt
+          cat /tmp/issue_body.txt | head -20
           
           python3 << 'PYEOF'
-          import os, re
-          
-          body = os.environ.get("BODY", "")
-          
+          import re
+
+          with open('/tmp/issue_body.txt', 'r', encoding='utf-8') as f:
+            body = f.read()
+
           def extract(key):
               pattern = r'### ' + key + r'\s*\n\s*(.*?)(?=\n###|\Z)'
               m = re.search(pattern, body, re.DOTALL)
@@ -38,22 +37,28 @@ jobs:
                   return ""
                 return val.strip('`')
               return ""
-          
-          print(f"name=[{extract('网站名称')}]")
-          print(f"desc=[{extract('网站描述')}]")
-          print(f"url=[{extract('网站链接')}]")
-          print(f"avatar=[{extract('网站头像 URL')}]")
-          print(f"friend_url=[{extract('友链页面 URL')}]")
-          
+
+          name = extract('网站名称')
+          desc = extract('网站描述')
+          url = extract('网站链接')
+          avatar = extract('网站头像 URL')
+          friend_url = extract('友链页面 URL')
+
+          print(f"提取结果: name=[{name}] url=[{url}] friend_url=[{friend_url}]")
+
           with open('/tmp/extracted.txt', 'w') as f:
-            f.write(f"name={extract('网站名称')}\n")
-            f.write(f"desc={extract('网站描述')}\n")
-            f.write(f"url={extract('网站链接')}\n")
-            f.write(f"avatar={extract('网站头像 URL')}\n")
-            f.write(f"friend_url={extract('友链页面 URL')}\n")
+            f.write(f"name={name}\n")
+            f.write(f"desc={desc}\n")
+            f.write(f"url={url}\n")
+            f.write(f"avatar={avatar}\n")
+            f.write(f"friend_url={friend_url}\n")
           PYEOF
           
-          cat /tmp/extracted.txt >> $GITHUB_OUTPUT
+          cat /tmp/extracted.txt
+
+      - name: 输出提取结果
+        id: extracted
+        run: cat /tmp/extracted.txt >> $GITHUB_OUTPUT
 
       - name: 安装 Node.js
         uses: actions/setup-node@v4
@@ -164,8 +169,8 @@ jobs:
         id: verify
         run: node verify.cjs
         env:
-          SITE_URL: ${{ steps.extract.outputs.url }}
-          FRIEND_URL: ${{ steps.extract.outputs.friend_url }}
+          SITE_URL: ${{ steps.extracted.outputs.url }}
+          FRIEND_URL: ${{ steps.extracted.outputs.friend_url }}
 
       - name: 读取验证结果
         id: result
@@ -188,8 +193,8 @@ jobs:
           with open('public/data/friends.json', 'r', encoding='utf-8') as f:
             friends = json.load(f)
           
-          name = """${{ steps.extract.outputs.name }}"""
-          url = """${{ steps.extract.outputs.url }}"""
+          name = """${{ steps.extracted.outputs.name }}"""
+          url = """${{ steps.extracted.outputs.url }}"""
           
           for friend in friends:
             if friend['url'].rstrip('/') == url.rstrip('/'):
@@ -199,8 +204,8 @@ jobs:
           new_friend = {
             "name": name,
             "url": url,
-            "avatar": """${{ steps.extract.outputs.avatar }}""",
-            "description": """${{ steps.extract.outputs.desc }}"""
+            "avatar": """${{ steps.extracted.outputs.avatar }}""",
+            "description": """${{ steps.extracted.outputs.desc }}"""
           }
           friends.append(new_friend)
           
@@ -218,7 +223,7 @@ jobs:
           git add public/data/friends.json
           
           if ! git diff --cached --quiet; then
-            git commit -m "feat: 添加友链 ${{ steps.extract.outputs.name }}"
+            git commit -m "feat: 添加友链 ${{ steps.extracted.outputs.name }}"
             git push
             echo "✅ 已提交并推送"
           else
@@ -236,8 +241,8 @@ jobs:
             感谢申请！友链已成功添加到列表中。
             
             📋 **友链信息**
-            - 名称：${{ steps.extract.outputs.name }}
-            - 链接：${{ steps.extract.outputs.url }}
+            - 名称：${{ steps.extracted.outputs.name }}
+            - 链接：${{ steps.extracted.outputs.url }}
             
             🔍 **验证结果**
             - 连通性测试：✅ 可达
