@@ -7,23 +7,56 @@ export interface CommitInfo {
 }
 
 /**
+ * 带重试机制的 fetch 函数
+ */
+async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 3): Promise<Response> {
+	for (let i = 0; i < retries; i++) {
+		try {
+			const response = await fetch(url, options);
+			if (response.ok) {
+				return response;
+			}
+			// 如果是 403 或 429，等待后重试
+			if (response.status === 403 || response.status === 429) {
+				const retryAfter = response.headers.get('retry-after');
+				const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : Math.pow(2, i) * 1000;
+				console.warn(`GitHub API rate limited, waiting ${waitTime}ms before retry...`);
+				await new Promise(resolve => setTimeout(resolve, waitTime));
+				continue;
+			}
+			throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+		} catch (error) {
+			if (i === retries - 1) throw error;
+			const waitTime = Math.pow(2, i) * 1000;
+			console.warn(`Fetch failed, retrying in ${waitTime}ms...`, error);
+			await new Promise(resolve => setTimeout(resolve, waitTime));
+		}
+	}
+	throw new Error('All retries failed');
+}
+
+/**
  * 获取最新的 Git commit 信息
  * 通过 GitHub API 获取
  */
 export async function getLatestCommit(): Promise<CommitInfo | null> {
 	try {
-		// 在生产环境中，从 GitHub API 获取
-		const response = await fetch('https://api.github.com/repos/ImUpXuu/myblog/commits?per_page=1', {
-			headers: {
-				'Accept': 'application/vnd.github.v3+json',
-			},
-			// 5 分钟缓存
-			next: { revalidate: 300 }
-		});
-
-		if (!response.ok) {
-			throw new Error('Failed to fetch commit info');
+		const headers: Record<string, string> = {
+			'Accept': 'application/vnd.github.v3+json',
+		};
+		
+		// 如果有 GitHub Token，使用它来避免速率限制
+		const token = import.meta.env.GITHUB_TOKEN;
+		if (token) {
+			headers['Authorization'] = `token ${token}`;
 		}
+
+		const response = await fetchWithRetry(
+			'https://api.github.com/repos/ImUpXuu/myblog/commits?per_page=1',
+			{
+				headers,
+			}
+		);
 
 		const commits = await response.json();
 		if (commits && commits.length > 0) {
@@ -39,7 +72,41 @@ export async function getLatestCommit(): Promise<CommitInfo | null> {
 		return null;
 	} catch (error) {
 		console.error('Error fetching git info:', error);
+		// 返回 null，让页面继续渲染，只是不显示 commit 信息
 		return null;
+	}
+}
+
+/**
+ * 获取 commit 历史记录（用于 diff 页面）
+ */
+export async function getCommitHistory(limit = 100): Promise<CommitInfo[]> {
+	try {
+		const headers: Record<string, string> = {
+			'Accept': 'application/vnd.github.v3+json',
+		};
+		
+		const token = import.meta.env.GITHUB_TOKEN;
+		if (token) {
+			headers['Authorization'] = `token ${token}`;
+		}
+
+		const response = await fetchWithRetry(
+			`https://api.github.com/repos/ImUpXuu/myblog/commits?per_page=${limit}`,
+			{ headers }
+		);
+
+		const commits = await response.json();
+		return commits.map((commit: any) => ({
+			sha: commit.sha,
+			shortSha: commit.sha.substring(0, 7),
+			date: commit.commit.author.date,
+			message: commit.commit.message,
+			author: commit.commit.author.name
+		}));
+	} catch (error) {
+		console.error('Error fetching commit history:', error);
+		return [];
 	}
 }
 
