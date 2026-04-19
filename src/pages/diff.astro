@@ -210,9 +210,9 @@ const jsonLd = {
 									
 									<!-- Commits 列表 -->
 									<div class={`space-y-3 ${isSameDay && day.commits.length > 1 ? 'collapsible' : ''}`}>
-										{
+										{(() => {
 											const commits = day.commits;
-											commits.map((commit, commitIndex) => {
+											return commits.map((commit, commitIndex) => {
 												const showLine = (commitIndex !== commits.length - 1 || dayIndex !== groupedCommits.length - 1);
 												return (
 													<div 
@@ -280,8 +280,8 @@ const jsonLd = {
 														</div>
 													</div>
 												);
-											})
-										}
+											});
+										})()}
 										
 										<!-- 展开/收起按钮 -->
 										{isSameDay && day.commits.length > 1 && (
