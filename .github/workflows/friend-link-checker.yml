@@ -24,11 +24,16 @@ jobs:
           echo "$BODY"
           echo "=================="
           
-          NAME=$(echo "$BODY" | awk '/### 网站名称/{getline; getline; print}' | sed 's/^ *//;s/\r$//')
-          DESC=$(echo "$BODY" | awk '/### 网站描述/{getline; getline; print}' | sed 's/^ *//;s/\r$//')
-          URL=$(echo "$BODY" | awk '/### 网站链接/{getline; getline; print}' | sed 's/^ *//;s/\r$//')
-          AVATAR=$(echo "$BODY" | awk '/### 网站头像 URL/{getline; getline; print}' | sed 's/^ *//;s/\r$//')
-          FRIEND_URL=$(echo "$BODY" | awk '/### 友链页面 URL/{getline; getline; print}' | sed 's/^ *//;s/\r$//')
+          extract_value() {
+            local key="$1"
+            echo "$BODY" | awk "/### $key/{getline; getline; getline; getline; gsub(/^\r/, \"\"); print}" | sed 's/^ *//;s/\r$//'
+          }
+          
+          NAME=$(extract_value "网站名称")
+          DESC=$(extract_value "网站描述")
+          URL=$(extract_value "网站链接")
+          AVATAR=$(extract_value "网站头像 URL")
+          FRIEND_URL=$(extract_value "友链页面 URL")
           
           [ "$NAME" = "No response" ] && NAME=""
           [ "$DESC" = "No response" ] && DESC=""
