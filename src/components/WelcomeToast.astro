@@ -41,12 +41,12 @@
     
     async function fetchLocation() {
         try {
-            const response = await fetch('https://api.iping.cc/v1/query?ip=1.1.1.1&language=zh');
+            const response = await fetch('https://v2.xxapi.cn/api/ip?ip=122.228.216.223');
             const data = await response.json();
             
             if (data.code === 200 && data.data) {
                 const location = data.data;
-                const locationText = `来自${location.country}${location.region}${location.city}的朋友`;
+                const locationText = `来自${location.address}的朋友`;
                 
                 const locationEl = document.getElementById('welcome-location');
                 if (locationEl) {
