@@ -24,36 +24,36 @@ jobs:
           echo "$BODY"
           echo "=================="
           
-          extract_value() {
-            local key="$1"
-            echo "$BODY" | awk "/### $key/{getline; getline; getline; getline; gsub(/^\r/, \"\"); print}" | sed 's/^ *//;s/\r$//'
-          }
+          python3 << 'PYEOF'
+          import os, re
           
-          NAME=$(extract_value "网站名称")
-          DESC=$(extract_value "网站描述")
-          URL=$(extract_value "网站链接")
-          AVATAR=$(extract_value "网站头像 URL")
-          FRIEND_URL=$(extract_value "友链页面 URL")
+          body = os.environ.get("BODY", "")
           
-          [ "$NAME" = "No response" ] && NAME=""
-          [ "$DESC" = "No response" ] && DESC=""
-          [ "$URL" = "No response" ] && URL=""
-          [ "$AVATAR" = "No response" ] && AVATAR=""
-          [ "$FRIEND_URL" = "No response" ] && FRIEND_URL=""
+          def extract(key):
+              pattern = r'### ' + key + r'\s*\n\s*(.*?)(?=\n###|\Z)'
+              m = re.search(pattern, body, re.DOTALL)
+              if m:
+                val = m.group(1).strip()
+                if val == "No response":
+                  return ""
+                return val.strip('`')
+              return ""
           
-          NAME=$(echo "$NAME" | sed 's/^`//;s/`$//')
-          DESC=$(echo "$DESC" | sed 's/^`//;s/`$//')
-          URL=$(echo "$URL" | sed 's/^`//;s/`$//')
-          AVATAR=$(echo "$AVATAR" | sed 's/^`//;s/`$//')
-          FRIEND_URL=$(echo "$FRIEND_URL" | sed 's/^`//;s/`$//')
+          print(f"name=[{extract('网站名称')}]")
+          print(f"desc=[{extract('网站描述')}]")
+          print(f"url=[{extract('网站链接')}]")
+          print(f"avatar=[{extract('网站头像 URL')}]")
+          print(f"friend_url=[{extract('友链页面 URL')}]")
           
-          echo "提取结果: name=[$NAME] desc=[$DESC] url=[$URL] avatar=[$AVATAR] friend_url=[$FRIEND_URL]"
+          with open('/tmp/extracted.txt', 'w') as f:
+            f.write(f"name={extract('网站名称')}\n")
+            f.write(f"desc={extract('网站描述')}\n")
+            f.write(f"url={extract('网站链接')}\n")
+            f.write(f"avatar={extract('网站头像 URL')}\n")
+            f.write(f"friend_url={extract('友链页面 URL')}\n")
+          PYEOF
           
-          echo "name=$NAME" >> $GITHUB_OUTPUT
-          echo "desc=$DESC" >> $GITHUB_OUTPUT
-          echo "url=$URL" >> $GITHUB_OUTPUT
-          echo "avatar=$AVATAR" >> $GITHUB_OUTPUT
-          echo "friend_url=$FRIEND_URL" >> $GITHUB_OUTPUT
+          cat /tmp/extracted.txt >> $GITHUB_OUTPUT
 
       - name: 安装 Node.js
         uses: actions/setup-node@v4
