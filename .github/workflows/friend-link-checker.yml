@@ -176,16 +176,51 @@ jobs:
         id: result
         run: |
           if [ -f /tmp/verify_result.json ]; then
-            cat /tmp/verify_result.json
             OVERALL=$(node -e "const r=JSON.parse(require('fs').readFileSync('/tmp/verify_result.json','utf-8'));console.log(r.overall)")
+            echo "overall=$OVERALL"
             echo "overall=$OVERALL" >> $GITHUB_OUTPUT
-            echo "raw=$(base64 -w0 /tmp/verify_result.json)" >> $GITHUB_OUTPUT
+            base64 /tmp/verify_result.json > /tmp/verify_b64.txt
+            RAW=$(cat /tmp/verify_b64.txt)
+            echo "raw=$RAW" >> $GITHUB_OUTPUT
           else
-            echo "overall=fail" >> $GITHUB_OUTPUT
+            echo "overall=empty"
+            echo "overall=empty" >> $GITHUB_OUTPUT
           fi
 
+      - name: 检查 URL 是否提取成功
+        id: check_url
+        run: |
+          URL="${{ steps.extracted.outputs.url }}"
+          if [ -z "$URL" ]; then
+            echo "url_missing=true" >> $GITHUB_OUTPUT
+          else
+            echo "url_missing=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 回复 Issue - URL 缺失
+        if: steps.check_url.outputs.url_missing == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ⚠️ 友链申请信息不完整
+
+请检查 Issue 内容，确保以下必填项都已填写：
+
+- ✅ 网站名称
+- ✅ 网站描述
+- ✅ **网站链接**（必填）
+- 网站头像 URL（选填）
+- 友链页面 URL（选填）
+
+请编辑此 Issue 补充信息后提交。`
+            });
+
       - name: 更新友链配置文件 (验证通过)
-        if: steps.result.outputs.overall == 'pass'
+        if: steps.result.outputs.overall == 'pass' && steps.check_url.outputs.url_missing != 'true'
         run: |
           python3 << 'PYTHON_SCRIPT'
           import json, sys
@@ -216,7 +251,7 @@ jobs:
           PYTHON_SCRIPT
 
       - name: 提交并推送 (验证通过)
-        if: steps.result.outputs.overall == 'pass'
+        if: steps.result.outputs.overall == 'pass' && steps.check_url.outputs.url_missing != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -231,7 +266,7 @@ jobs:
           fi
 
       - name: 回复 Issue - 验证通过并关闭
-        if: steps.result.outputs.overall == 'pass'
+        if: steps.result.outputs.overall == 'pass' && steps.check_url.outputs.url_missing != 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -265,7 +300,7 @@ jobs:
             });
 
       - name: 回复 Issue - 验证失败
-        if: steps.result.outputs.overall == 'fail'
+        if: (steps.result.outputs.overall == 'fail' || steps.result.outputs.overall == 'empty') && steps.check_url.outputs.url_missing != 'true'
         uses: actions/github-script@v7
         with:
           script: |
