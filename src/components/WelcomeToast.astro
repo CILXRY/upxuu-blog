@@ -126,15 +126,38 @@
         sessionStorage.setItem(VISIT_SESSION_KEY, 'true');
     }
     
+    // 检查是否是社交媒体爬虫
+    function isSocialMediaBot() {
+        const userAgent = navigator.userAgent || '';
+        const bots = [
+            'facebookexternalhit',
+            'Twitterbot',
+            'LinkedInBot',
+            'Pinterest',
+            'WhatsApp',
+            'TelegramBot',
+            'Googlebot',
+            'Bingbot',
+            'Slurp',
+            'DuckDuckBot',
+            'Baiduspider',
+            'YandexBot',
+            'facebot',
+            'ia_archiver'
+        ];
+        
+        return bots.some(bot => userAgent.toLowerCase().includes(bot.toLowerCase()));
+    }
+    
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', async () => {
-            if (shouldShowWelcome()) {
+            if (shouldShowWelcome() && !isSocialMediaBot()) {
                 markAsVisited();
                 await showWelcomeToast();
             }
         });
     } else {
-        if (shouldShowWelcome()) {
+        if (shouldShowWelcome() && !isSocialMediaBot()) {
             markAsVisited();
             await showWelcomeToast();
         }
