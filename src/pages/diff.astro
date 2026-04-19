@@ -223,7 +223,7 @@ const jsonLd = {
 									
 									<!-- Commits 列表 -->
 									<div class={`space-y-3 ${isSameDay && day.commits.length > 1 ? 'collapsible' : ''}`}>
-										{day.commits.map((commit: Commit, commitIndex: number) => (
+										{day.commits.map((commit, commitIndex) => (
 											<div 
 												class={`commit-item relative pl-8 pb-3 last:pb-0 ${isSameDay && commitIndex > 0 ? 'hidden' : ''}`}
 												data-day-index={dayIndex}
