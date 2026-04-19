@@ -11,328 +11,195 @@ jobs:
     permissions:
       issues: write
       contents: write
-    
+
     steps:
-      - name: 检出代码
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: 提取 Issue 内容
-        id: extract
-        run: |
-          echo "${{ github.event.issue.body }}" > /tmp/issue_body.txt
-          cat /tmp/issue_body.txt | head -20
-          
-          python3 << 'PYEOF'
-          import re
-
-          with open('/tmp/issue_body.txt', 'r', encoding='utf-8') as f:
-            body = f.read()
-
-          def extract(key):
-              pattern = r'### ' + key + r'\s*\n\s*(.*?)(?=\n###|\Z)'
-              m = re.search(pattern, body, re.DOTALL)
-              if m:
-                val = m.group(1).strip()
-                if val == "No response":
-                  return ""
-                return val.strip('`')
-              return ""
-
-          name = extract('网站名称')
-          desc = extract('网站描述')
-          url = extract('网站链接')
-          avatar = extract('网站头像 URL')
-          friend_url = extract('友链页面 URL')
-
-          print(f"提取结果: name=[{name}] url=[{url}] friend_url=[{friend_url}]")
-
-          with open('/tmp/extracted.txt', 'w') as f:
-            f.write(f"name={name}\n")
-            f.write(f"desc={desc}\n")
-            f.write(f"url={url}\n")
-            f.write(f"avatar={avatar}\n")
-            f.write(f"friend_url={friend_url}\n")
-          PYEOF
-          
-          cat /tmp/extracted.txt
-
-      - name: 输出提取结果
-        id: extracted
-        run: cat /tmp/extracted.txt >> $GITHUB_OUTPUT
-
-      - name: 安装 Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: 安装 Playwright
+      - name: Install Playwright
         run: |
           npm init -y
           npm install playwright
           npx playwright install --with-deps chromium
 
-      - name: 创建验证脚本
-        run: |
-          cat > verify.cjs << 'EOF'
-          const { chromium } = require('playwright');
-          const fs = require('fs');
-          const https = require('https');
-          const http = require('http');
+      - name: Run everything
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { chromium } = require('playwright');
+            const fs = require('fs');
+            const https = require('https');
+            const http = require('http');
 
-          async function checkConnectivity(url) {
-            return new Promise((resolve) => {
-              const client = url.startsWith('https') ? https : http;
-              const req = client.get(url, { timeout: 10000 }, (res) => {
-                resolve({ ok: res.statusCode >= 200 && res.statusCode < 400, status: res.statusCode });
-                res.resume();
-              });
-              req.on('error', (e) => resolve({ ok: false, status: 0, error: e.message }));
-              req.on('timeout', () => { req.destroy(); resolve({ ok: false, status: 0, error: 'timeout' }); });
-            });
-          }
+            const body = context.payload.issue.body;
+            console.log('=== Issue Body ===');
+            console.log(body);
+            console.log('==================');
 
-          async function verify() {
-            const siteUrl = process.env.SITE_URL || '';
-            let verifyUrl = process.env.FRIEND_URL || '';
-            if (verifyUrl) verifyUrl = verifyUrl.trim();
-            if (siteUrl) {
-              const trimmed = siteUrl.trim();
-              if (!verifyUrl) verifyUrl = trimmed;
+            function extract(key) {
+              const pattern = new RegExp('### ' + key + '\\s*\\n\\s*(.*?)(?=\\n###|\\Z)', 's');
+              const m = body.match(pattern);
+              if (m) {
+                let val = m[1].trim();
+                if (val === 'No response') return '';
+                return val.replace(/^`|`$/g, '');
+              }
+              return '';
             }
 
+            const name = extract('网站名称');
+            const desc = extract('网站描述');
+            const url = extract('网站链接');
+            const avatar = extract('网站头像 URL');
+            const friendUrl = extract('友链页面 URL');
+
+            console.log(`提取: name=[${name}] url=[${url}] friend_url=[${friendUrl}]`);
+
             const result = {
-              site_url: siteUrl,
-              friend_url: verifyUrl,
+              site_url: url,
+              friend_url: friendUrl || url,
               connectivity: null,
               friend_link_check: null,
               overall: 'fail'
             };
 
-            if (!verifyUrl) {
-              console.error('错误: 未提供验证 URL');
-              fs.writeFileSync('/tmp/verify_result.json', JSON.stringify(result));
+            if (!url) {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: '## ⚠️ 申请信息不完整\n\n请确保填写了**网站链接**（必填）。\n\n编辑此 Issue 补充信息后会自动重新验证。'
+              });
               return;
             }
 
+            // 连通性测试
+            const checkConn = (u) => new Promise((resolve) => {
+              const client = u.startsWith('https') ? https : http;
+              const req = client.get(u, { timeout: 10000 }, (res) => {
+                resolve({ ok: res.statusCode >= 200 && res.statusCode < 400, status: res.statusCode });
+                res.resume();
+              });
+              req.on('error', (e) => resolve({ ok: false, error: e.message }));
+              req.on('timeout', () => { req.destroy(); resolve({ ok: false, error: 'timeout' }); });
+            });
+
+            const verifyUrl = friendUrl || url;
             console.log('1. 连通性测试:', verifyUrl);
-            const connResult = await checkConnectivity(verifyUrl);
-            result.connectivity = connResult;
-            console.log('   状态:', connResult.ok ? '可达' : '不可达', connResult.error || '');
+            const conn = await checkConn(verifyUrl);
+            result.connectivity = conn;
+            console.log('   结果:', conn.ok ? '可达' : '不可达', conn.error || '');
 
-            if (!connResult.ok) {
-              console.log('连通性测试失败，跳过友链验证');
-              fs.writeFileSync('/tmp/verify_result.json', JSON.stringify(result, null, 2));
-              return;
+            if (conn.ok) {
+              console.log('2. 浏览器验证');
+              const browser = await chromium.launch({ headless: true });
+              const context = await browser.newContext({
+                userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+              });
+              const page = await context.newPage();
+
+              try {
+                await page.goto(verifyUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+                const content = await page.content();
+                const allLinks = await page.evaluate(() =>
+                  Array.from(document.querySelectorAll('a[href]')).map(a => a.href)
+                );
+                const found = (content + '\n' + allLinks.join('\n')).toLowerCase().includes('upxuu.com');
+                result.friend_link_check = { found, actual_url: page.url() };
+                console.log('   结果:', found ? '✅ 找到 upxuu.com' : '❌ 未找到');
+              } catch (e) {
+                console.error('   错误:', e.message);
+                result.friend_link_check = { found: false, error: e.message };
+              } finally {
+                await browser.close();
+              }
             }
 
-            console.log('2. 友链验证');
-            const browser = await chromium.launch({ headless: true });
-            const context = await browser.newContext({
-              userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            });
-            const page = await context.newPage();
-
-            try {
-              await page.goto(verifyUrl, { 
-                waitUntil: 'domcontentloaded',
-                timeout: 30000 
-              });
-
-              const content = await page.content();
-              const actualUrl = page.url();
-              console.log('   实际访问地址:', actualUrl);
-
-              const allLinks = await page.evaluate(() => {
-                return Array.from(document.querySelectorAll('a[href]')).map(a => a.href);
-              });
-              const linksText = allLinks.join('\n');
-
-              const found = content.toLowerCase().includes('upxuu.com') || linksText.toLowerCase().includes('upxuu.com');
-              result.friend_link_check = { found, actual_url: actualUrl };
-              console.log('   结果:', found ? '✅ 找到 upxuu.com' : '❌ 未找到 upxuu.com');
-            } catch (error) {
-              console.error('   访问失败:', error.message);
-              result.friend_link_check = { found: false, error: error.message };
-            } finally {
-              await browser.close();
-            }
-
-            result.overall = (connResult.ok && result.friend_link_check?.found) ? 'pass' : 'fail';
-            fs.writeFileSync('/tmp/verify_result.json', JSON.stringify(result, null, 2));
+            result.overall = (conn.ok && result.friend_link_check?.found) ? 'pass' : 'fail';
             console.log('最终结果:', result.overall);
-          }
 
-          verify();
-          EOF
+            if (result.overall === 'pass') {
+              // 读取并更新 friends.json
+              const friendsPath = 'public/data/friends.json';
+              const friends = JSON.parse(fs.readFileSync(friendsPath, 'utf-8'));
 
-      - name: 验证友链
-        id: verify
-        run: node verify.cjs
-        env:
-          SITE_URL: ${{ steps.extracted.outputs.url }}
-          FRIEND_URL: ${{ steps.extracted.outputs.friend_url }}
+              const exists = friends.some(f => f.url.replace(/\/$/, '') === url.replace(/\/$/, ''));
+              if (!exists) {
+                friends.push({ name, url, avatar, description: desc });
+                fs.writeFileSync(friendsPath, JSON.stringify(friends, null, 2), 'utf-8');
+                console.log('✅ 友链已添加到 friends.json');
 
-      - name: 读取验证结果
-        id: result
-        run: |
-          if [ -f /tmp/verify_result.json ]; then
-            OVERALL=$(node -e "const r=JSON.parse(require('fs').readFileSync('/tmp/verify_result.json','utf-8'));console.log(r.overall)")
-            echo "overall=$OVERALL"
-            echo "overall=$OVERALL" >> $GITHUB_OUTPUT
-            base64 /tmp/verify_result.json > /tmp/verify_b64.txt
-            RAW=$(cat /tmp/verify_b64.txt)
-            echo "raw=$RAW" >> $GITHUB_OUTPUT
-          else
-            echo "overall=empty"
-            echo "overall=empty" >> $GITHUB_OUTPUT
-          fi
+                // 提交
+                const { execSync } = require('child_process');
+                execSync('git config user.name "github-actions[bot]"');
+                execSync('git config user.email "github-actions[bot]@users.noreply.github.com"');
+                execSync('git add ' + friendsPath);
+                if (execSync('git diff --cached --quiet', { encoding: 'utf-8' }) === '') {
+                  // no changes
+                } else {
+                  try {
+                    execSync(`git commit -m "feat: 添加友链 ${name}"`);
+                    execSync('git push');
+                    console.log('✅ 已推送');
+                  } catch (e) {
+                    console.error('推送失败:', e.message);
+                  }
+                }
+              }
 
-      - name: 检查 URL 是否提取成功
-        id: check_url
-        run: |
-          URL="${{ steps.extracted.outputs.url }}"
-          if [ -z "$URL" ]; then
-            echo "url_missing=true" >> $GITHUB_OUTPUT
-          else
-            echo "url_missing=false" >> $GITHUB_OUTPUT
-          fi
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## ✅ 友链申请已通过！
 
-      - name: 回复 Issue - URL 缺失
-        if: steps.check_url.outputs.url_missing == 'true'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `## ⚠️ 友链申请信息不完整
+📋 **友链信息**
+- 名称：${name}
+- 链接：${url}
 
-请检查 Issue 内容，确保以下必填项都已填写：
+🔍 **验证结果**
+- 连通性：✅ 可达
+- 友链验证：✅ 已找到 upxuu.com
 
-- ✅ 网站名称
-- ✅ 网站描述
-- ✅ **网站链接**（必填）
-- 网站头像 URL（选填）
-- 友链页面 URL（选填）
+⚡ Vercel 将自动部署更新，几分钟内生效。感谢支持！🎉`
+              });
+              await github.rest.issues.update({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'closed'
+              });
+            } else {
+              const connText = conn.ok ? '✅ 可达' : `❌ 不可达 (${conn.error || '超时'})`;
+              const linkText = result.friend_link_check?.found ? '✅ 已找到' : '❌ 未找到 upxuu.com';
 
-请编辑此 Issue 补充信息后提交。`
-            });
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## ❌ 友链申请未通过
 
-      - name: 更新友链配置文件 (验证通过)
-        if: steps.result.outputs.overall == 'pass' && steps.check_url.outputs.url_missing != 'true'
-        run: |
-          python3 << 'PYTHON_SCRIPT'
-          import json, sys
-          
-          with open('public/data/friends.json', 'r', encoding='utf-8') as f:
-            friends = json.load(f)
-          
-          name = """${{ steps.extracted.outputs.name }}"""
-          url = """${{ steps.extracted.outputs.url }}"""
-          
-          for friend in friends:
-            if friend['url'].rstrip('/') == url.rstrip('/'):
-              print(f"友链已存在: {url}")
-              sys.exit(0)
-          
-          new_friend = {
-            "name": name,
-            "url": url,
-            "avatar": """${{ steps.extracted.outputs.avatar }}""",
-            "description": """${{ steps.extracted.outputs.desc }}"""
-          }
-          friends.append(new_friend)
-          
-          with open('public/data/friends.json', 'w', encoding='utf-8') as f:
-            json.dump(friends, f, ensure_ascii=False, indent=2)
-          
-          print("✅ 友链已添加")
-          PYTHON_SCRIPT
+🔍 **验证结果**
+- 连通性：${connText}
+- 友链验证：${linkText}
+- 检测地址：${verifyUrl}
 
-      - name: 提交并推送 (验证通过)
-        if: steps.result.outputs.overall == 'pass' && steps.check_url.outputs.url_missing != 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/data/friends.json
-          
-          if ! git diff --cached --quiet; then
-            git commit -m "feat: 添加友链 ${{ steps.extracted.outputs.name }}"
-            git push
-            echo "✅ 已提交并推送"
-          else
-            echo "友链已存在，无需更新"
-          fi
+📝 **本站信息**
+- 名称: UpXuu
+- 链接: https://upxuu.com
+- 头像: https://upxuu.com/images/20260214145619.jpg
 
-      - name: 回复 Issue - 验证通过并关闭
-        if: steps.result.outputs.overall == 'pass' && steps.check_url.outputs.url_missing != 'true'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const r = JSON.parse(Buffer.from(`${{ steps.result.outputs.raw }}`, 'base64').toString('utf-8'));
-            const body = `## ✅ 友链申请已通过！
-            
-            感谢申请！友链已成功添加到列表中。
-            
-            📋 **友链信息**
-            - 名称：${{ steps.extracted.outputs.name }}
-            - 链接：${{ steps.extracted.outputs.url }}
-            
-            🔍 **验证结果**
-            - 连通性测试：✅ 可达
-            - 友链验证：✅ 已找到 upxuu.com
-            
-            ⚡ Vercel 将自动重新部署，几分钟内更新生效。
-            
-            感谢支持！🎉`;
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body
-            });
-            await github.rest.issues.update({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'closed'
-            });
-
-      - name: 回复 Issue - 验证失败
-        if: (steps.result.outputs.overall == 'fail' || steps.result.outputs.overall == 'empty') && steps.check_url.outputs.url_missing != 'true'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const r = JSON.parse(Buffer.from(`${{ steps.result.outputs.raw }}`, 'base64').toString('utf-8'));
-            const connStatus = r.connectivity?.ok ? '✅ 可达' : `❌ 不可达 (${r.connectivity?.error || '连接超时'})`;
-            const linkStatus = r.friend_link_check?.found ? '✅ 已找到 upxuu.com' : `❌ 未找到 upxuu.com`;
-            
-            let body = `## ❌ 友链申请未通过
-            
-            🔍 **验证结果**
-            - 连通性测试：${connStatus}
-            - 友链验证：${linkStatus}
-            - 检测地址：${r.friend_url || r.site_url}
-            
-            📝 **请检查以下事项**
-            - 确保网站可以正常访问
-            - 在友链页面添加本站信息：
-              - 名称: UpXuu
-              - 链接: https://upxuu.com
-              - 头像: https://upxuu.com/images/20260214145619.jpg
-            
-            修改完成后，请**编辑此 Issue** 触发重新验证。`;
-            
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body
-            });
-            await github.rest.issues.addLabels({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              labels: ['需处理']
-            });
+请确认已在你的网站添加本站友链，然后编辑此 Issue 触发重新验证。`
+              });
+              await github.rest.issues.addLabels({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: ['需处理']
+              });
+            }
