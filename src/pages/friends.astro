@@ -4,7 +4,6 @@ import BannerTitle from "../components/BannerTitle.astro";
 import { profileConfig, siteConfig } from "../config";
 import friendsData from "../../public/data/friends.json";
 
-// 添加自己的信息到首位
 const friends = [
 	{
 		name: "UpXuu",
@@ -37,10 +36,54 @@ const jsonLd = {
 	
 	<div class="flex w-full rounded-[var(--radius-large)] overflow-hidden relative min-h-32">
 		<div class="card-base z-10 px-6 md:px-9 py-6 relative w-full">
-			<div class="mb-10 text-center">
+			<div class="mb-10 text-center flex justify-between items-center">
 				<h1 class="text-4xl font-bold text-gray-800 dark:text-gray-200 mb-3">
 					🤝 友情链接
 				</h1>
+				<button id="edit-toggle" class="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">编辑</button>
+			</div>
+			
+			<div id="edit-panel" class="hidden mb-8 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
+				<div class="flex justify-between items-center mb-3">
+					<h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200">友链管理</h2>
+					<button id="new-friend" class="text-sm px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">+ 新建</button>
+				</div>
+				<div id="friend-list" class="max-h-60 overflow-y-auto space-y-1">
+				</div>
+			</div>
+
+			<div id="edit-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+				<div class="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl">
+					<div class="flex justify-between items-center mb-4">
+						<h3 id="modal-title" class="text-xl font-bold text-gray-800 dark:text-gray-200">编辑友链</h3>
+						<button id="modal-close" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl leading-none">&times;</button>
+					</div>
+					<div class="space-y-3">
+						<div>
+							<label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">名称</label>
+							<input id="edit-name" type="text" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+						</div>
+						<div>
+							<label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">链接</label>
+							<input id="edit-url" type="text" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+						</div>
+						<div>
+							<label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">头像 URL</label>
+							<input id="edit-avatar" type="text" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+						</div>
+						<div>
+							<label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">描述</label>
+							<input id="edit-desc" type="text" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+						</div>
+					</div>
+					<div class="flex gap-3 mt-5">
+						<button id="modal-save" class="flex-1 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">保存</button>
+						<button id="modal-delete" class="py-2 px-4 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">删除</button>
+					</div>
+					<div class="mt-3">
+						<button id="modal-download" class="w-full py-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors">下载 JSON 文件</button>
+					</div>
+				</div>
 			</div>
 			
 			<div class="friends-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -82,6 +125,112 @@ const jsonLd = {
 		</div>
 	</div>
 </MainGridLayout>
+
+<script>
+const friendsList = [
+  { name: "LsAng", url: "https://llds.cloud", avatar: "https://llds.cloud/lsang.png", description: "学习、探索中" },
+  { name: "流欺の个人博客", url: "https://blog.lqay.cn/", avatar: "https://tc.lqay.cn/LightPicture/2026/03/5f64e0f0f361e19c.png", description: "嗯对就是个博客" },
+  { name: "zplb の博客", url: "https://blog.zplb.top", avatar: "https://zplb.org.cn/images/zplb.png", description: "一个喜欢网安的学生~" },
+  { name: "石猫博客~", url: "https://imshimao.com", avatar: "", description: "" },
+  { name: "巳忆笔记", url: "https://lleft.cn/", avatar: "https://tc.lleft.cn/PicGo/logo.png", description: "记住所有美好回忆" },
+  { name: "zeroanon", url: "https://zeroanon.com", avatar: "https://avatars.githubusercontent.com/u/119206123?v=4", description: "不做圣经里腐朽的诗集，要做禁书里最惊世骇俗的篇章" },
+  { name: "NGC7293的星域", url: "https://xmk.life/", avatar: "https://xmk.life/ngc7293.png", description: "博客" },
+  { name: "瓶中虾", url: "https://weiyu14.top", avatar: "https://weiyu14.top/assets/ava-e842524e.jpg", description: "只闻花香 不争朝夕" },
+  { name: "ChenServer", url: "https://etaris.moe", avatar: "https://cn.cravatar.com/avatar/f9ff0db2d48c61f21a01f31de18643c2?d=mp&s=240", description: "🤔" },
+  { name: "沐光橙香", url: "https://mugcx.com", avatar: "https://mugcx.com/logo.png", description: "暖阳旧时光，草木亦生香" },
+  { name: "无大人生", url: "https://blog.wudarensheng.top/", avatar: "https://q2.qlogo.cn/headimg_dl?dst_uin=3574552394&spec=0", description: "远赴人间惊鸿宴，一睹人间盛世颜。" },
+  { name: "ziworld", url: "https://blog.ziworld.top", avatar: "https://blog.ziworld.top/assect/images/avatar.webp", description: "For all time, always." },
+  { name: "爱琉璃", url: "https://www.illlt.com/", avatar: "", description: "" },
+  { name: "桃花源 TYC", url: "https://www.ty2c.com/", avatar: "", description: "" },
+  { name: "QgxsのBlog", url: "https://www.20210701.xyz/", avatar: "https://www.20210701.xyz/icon.jpeg", description: "放松心情，漫游四处，处处美景。" },
+  { name: "涵哲子居", url: "https://afipo.top", avatar: "https://afipo.top/logo.png", description: "天哲地理，共公卿好" },
+  { name: "AkiNard Blog", url: "https://blog.578113.xyz", avatar: "https://q1.qlogo.cn/g?b=qq&nk=3833773438&s=640", description: "白云千载空悠悠." },
+];
+
+let editingIndex = -1;
+
+function renderList() {
+  const list = document.getElementById('friend-list');
+  list.innerHTML = friendsList.map((f, i) => `
+    <button class="friend-list-item w-full text-left px-3 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-sm text-gray-700 dark:text-gray-300 truncate" data-index="${i}">
+      ${f.name}
+    </button>
+  `).join('');
+}
+
+function openModal(index) {
+  editingIndex = index;
+  const f = friendsList[index];
+  document.getElementById('modal-title').textContent = index === -1 ? '新建友链' : '编辑友链';
+  document.getElementById('edit-name').value = f.name || '';
+  document.getElementById('edit-url').value = f.url || '';
+  document.getElementById('edit-avatar').value = f.avatar || '';
+  document.getElementById('edit-desc').value = f.description || '';
+  document.getElementById('modal-delete').style.display = index === -1 ? 'none' : '';
+  document.getElementById('edit-modal').classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('edit-modal').classList.add('hidden');
+  editingIndex = -1;
+}
+
+function downloadJSON() {
+  const data = JSON.stringify(friendsList, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'friends.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('edit-toggle').addEventListener('click', () => {
+  const panel = document.getElementById('edit-panel');
+  panel.classList.toggle('hidden');
+  if (!panel.classList.contains('hidden')) renderList();
+});
+
+document.getElementById('new-friend').addEventListener('click', () => {
+  friendsList.push({ name: '', url: '', avatar: '', description: '' });
+  openModal(friendsList.length - 1);
+});
+
+document.getElementById('friend-list').addEventListener('click', (e) => {
+  const btn = e.target.closest('.friend-list-item');
+  if (!btn) return;
+  openModal(parseInt(btn.dataset.index));
+});
+
+document.getElementById('modal-close').addEventListener('click', closeModal);
+document.getElementById('modal-download').addEventListener('click', downloadJSON);
+
+document.getElementById('modal-save').addEventListener('click', () => {
+  const name = document.getElementById('edit-name').value.trim();
+  const url = document.getElementById('edit-url').value.trim();
+  const avatar = document.getElementById('edit-avatar').value.trim();
+  const description = document.getElementById('edit-desc').value.trim();
+
+  if (!name || !url) {
+    alert('名称和链接不能为空');
+    return;
+  }
+
+  friendsList[editingIndex] = { name, url, avatar, description };
+  renderList();
+  closeModal();
+  alert('已保存，点击下载 JSON 文件导出');
+});
+
+document.getElementById('modal-delete').addEventListener('click', () => {
+  if (editingIndex >= 0 && confirm('确定删除这条友链？')) {
+    friendsList.splice(editingIndex, 1);
+    renderList();
+    closeModal();
+  }
+});
+</script>
 
 <style>
 .friends-grid {
