@@ -3,25 +3,9 @@ import MainGridLayout from "../layouts/MainGridLayout.astro";
 import BannerTitle from "../components/BannerTitle.astro";
 import { profileConfig, siteConfig } from "../config";
 
-interface Commit {
-	sha: string;
-	shortSha: string;
-	date: string;
-	message: string;
-	author: string;
-	files?: any[];
-}
-
-interface GroupedCommits {
-	year: number;
-	month: number;
-	day: string;
-	commits: Commit[];
-}
-
-async function getCommitHistory(): Promise<Commit[]> {
+async function getCommitHistory() {
 	try {
-		const allCommits: Commit[] = [];
+		const allCommits = [];
 		let page = 1;
 		
 		while (true) {
@@ -40,7 +24,7 @@ async function getCommitHistory(): Promise<Commit[]> {
 			
 			if (commits.length === 0) break;
 			
-			allCommits.push(...commits.map((commit: any) => ({
+			allCommits.push(...commits.map((commit) => ({
 				sha: commit.sha,
 				shortSha: commit.sha.substring(0, 7),
 				date: commit.commit.author.date,
@@ -64,7 +48,7 @@ async function getCommitHistory(): Promise<Commit[]> {
 					
 					if (response.ok) {
 						const data = await response.json();
-						commit.files = data.files?.slice(0, 10) || []; // 只显示前 10 个文件
+						commit.files = data.files?.slice(0, 10) || [];
 					}
 				} catch (e) {
 					console.error('Failed to fetch files for commit:', commit.shortSha);
@@ -80,7 +64,7 @@ async function getCommitHistory(): Promise<Commit[]> {
 	}
 }
 
-function formatDate(dateString: string): string {
+function formatDate(dateString) {
 	const date = new Date(dateString);
 	date.setHours(date.getHours() + 8);
 	const year = date.getFullYear();
@@ -92,13 +76,13 @@ function formatDate(dateString: string): string {
 	return `${year}-${month}-${day} ${hour}:${minute}`;
 }
 
-function getMonthName(month: number): string {
+function getMonthName(month) {
 	const months = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'];
 	return months[month - 1];
 }
 
-function groupCommitsByDate(commits: Commit[]): GroupedCommits[] {
-	const groups = new Map<string, GroupedCommits>();
+function groupCommitsByDate(commits) {
+	const groups = new Map();
 	
 	commits.forEach(commit => {
 		const date = new Date(commit.date);
@@ -127,7 +111,7 @@ const allCommits = await getCommitHistory();
 const groupedCommits = groupCommitsByDate(allCommits);
 
 // 生成月份导航
-const monthNav = new Map<string, number>();
+const monthNav = new Map();
 groupedCommits.forEach(group => {
 	const key = `${group.year}-${String(group.month).padStart(2, '0')}`;
 	if (!monthNav.has(key)) {
@@ -212,7 +196,7 @@ const jsonLd = {
 								}
 								
 								return days;
-							}, []).map((day: any, dayIndex: number) => (
+							}, []).map((day, dayIndex) => (
 								<div class="day-group mb-6">
 									<!-- 日期标题 -->
 									<div class="flex items-center gap-3 mb-4">
@@ -264,7 +248,7 @@ const jsonLd = {
 													{commit.files && commit.files.length > 0 && (
 														<div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
 															<div class="flex flex-wrap gap-2">
-																{commit.files.map((file: any) => (
+																{commit.files.map((file) => (
 																	<span 
 																		class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs text-gray-600 dark:text-gray-400"
 																		title={file.filename}
@@ -326,7 +310,7 @@ const jsonLd = {
 </MainGridLayout>
 
 <script>
-	function toggleDayCommits(button: HTMLElement, dayIndex: number) {
+	function toggleDayCommits(button, dayIndex) {
 		const commitItems = document.querySelectorAll(`[data-day-index="${dayIndex}"]`);
 		const expandText = button.querySelector('.expand-text');
 		const collapseText = button.querySelector('.collapse-text');
@@ -355,7 +339,7 @@ const jsonLd = {
 		}
 	}
 	
-	(window as any).toggleDayCommits = toggleDayCommits;
+	window.toggleDayCommits = toggleDayCommits;
 </script>
 
 <style>
