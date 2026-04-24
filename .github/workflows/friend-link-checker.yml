@@ -201,7 +201,9 @@ jobs:
             const { execSync } = require('child_process');
             execSync('git config user.name "github-actions[bot]"');
             execSync('git config user.email "github-actions[bot]@users.noreply.github.com"');
+            execSync('git stash');
             execSync('git pull origin main --rebase');
+            execSync('git stash pop');
             execSync(`git add ${friendsPath}`);
             execSync(`git commit -m "🤝 更新友链: ${name}"`);
             execSync('git push');
