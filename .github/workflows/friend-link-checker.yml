@@ -175,7 +175,7 @@ jobs:
             // 第三步：验证通过，更新 friends.json
             await browser.close();
 
-            const friendsPath = path.join('myblog', 'public', 'data', 'friends.json');
+            const friendsPath = 'public/data/friends.json';
             let friends = [];
 
             if (fs.existsSync(friendsPath)) {
