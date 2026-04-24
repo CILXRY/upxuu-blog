@@ -2,15 +2,12 @@ name: 🤝 自动更新友链
 
 on:
   issues:
-    types: [opened]
+    types: [opened, reopened]
   issue_comment:
     types: [created]
 
 jobs:
   update-friends:
-    if: >
-      (github.event_name == 'issues' && github.event.action == 'opened') ||
-      (github.event_name == 'issue_comment' && github.event.comment.body == '/recheck')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -31,7 +28,7 @@ jobs:
           npm install playwright
           npx playwright install --with-deps chromium
 
-      - name: 处理友链验证
+      - name: 解析 Issue 并验证友链
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -40,61 +37,39 @@ jobs:
             const path = require('path');
             const { chromium } = require('playwright');
 
+            // 判断触发类型
+            const isIssueOpen = context.eventName === 'issues' &&
+              (context.payload.action === 'opened' || context.payload.action === 'reopened');
+            const isComment = context.eventName === 'issue_comment';
+
             // 获取 issue 信息
-            const issue = context.payload.issue || context.payload.issue_comment && await github.rest.issues.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.issue_comment.issue_number
-            }).then(r => r.data);
-
-            if (!issue) return;
-
-            // 判断是否是 recheck 命令
-            const isRecheck = context.payload.comment && context.payload.comment.body.trim() === '/recheck';
-
-            if (isRecheck) {
-              // 从之前验证失败的评论中提取 URL
-              const comments = await github.rest.issues.listComments({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issue.number
-              });
-              let targetUrl = null;
-              let targetName = null;
-              for (const c of comments.data) {
-                if (c.body.includes('❌ 友链验证失败') && c.body.includes('https://')) {
-                  const urlMatch = c.body.match(/\(https?:\/\/[^)]+\)/);
-                  const nameMatch = c.body.match(/\*\*(.+?)\*\*.*验证失败/);
-                  if (urlMatch) {
-                    targetUrl = urlMatch[0].replace(/[()]/g, '');
-                    targetName = nameMatch ? nameMatch[1] : '未知';
-                    break;
-                  }
-                }
-              }
-              if (!targetUrl) {
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issue.number,
-                  body: '未找到可重新验证的友链信息。'
-                });
-                return;
-              }
-
-              // 执行重新验证
-              await verifyAndProcess(targetName, targetUrl, issue, github, context, fs, path, chromium);
-              return;
-            }
-
-            // 正常的新建 issue 流程
+            const issue = context.payload.issue;
             const body = issue.body || '';
+            const isFriendRequest = body.includes('### 网站名称') && body.includes('### 网站链接');
 
-            if (!body.includes('### 网站名称') || !body.includes('### 网站链接')) {
+            // 只有友链申请才处理
+            if (!isFriendRequest) {
               console.log('非友链申请 issue，跳过');
               return;
             }
 
+            // 评论触发时检查是否有 "重新验证" 的意图
+            if (isComment) {
+              const comment = context.payload.comment.body.trim().toLowerCase();
+              const commenter = context.payload.comment.user.login;
+              const isAuthor = comment.author === issue.user.login;
+              const wantsRerun = comment.includes('重新验证') || comment.includes('retry') ||
+                comment.includes('重新检查') || comment === '/verify';
+
+              // 只有作者回复失败信息才重新验证
+              if (!isAuthor || !wantsRerun) {
+                console.log('评论不是来自作者或没有重新验证请求，跳过');
+                return;
+              }
+              console.log('作者请求重新验证');
+            }
+
+            // 解析表单字段
             function extractField(name, text) {
               const regex = new RegExp(`### ${name}\\s*\\n([^#]+)`, 'i');
               const match = text.match(regex);
@@ -116,150 +91,135 @@ jobs:
               return;
             }
 
-            await verifyAndProcess(name, url, issue, github, context, fs, path, chromium, description, avatar);
+            const cleanUrl = url.replace(/\/$/, '');
+            const cleanAvatar = avatar ? avatar.trim() : '';
 
-            async function verifyAndProcess(name, rawUrl, issue, github, context, fs, path, chromium, description, avatar) {
-              const cleanUrl = rawUrl.replace(/\/$/, '');
-              const cleanAvatar = (avatar || '').trim();
+            // 用 Playwright 测试连通性（避免 403）
+            console.log(`正在测试连通性: ${cleanUrl}`);
+            const browser = await chromium.launch({ headless: true });
+            const context_browser = await browser.newContext({
+              userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            });
+            const page = await context_browser.newPage();
 
-              console.log(`正在测试连通性: ${cleanUrl}`);
+            let connError = null;
+            let actualUrl = cleanUrl;
+            let pageTitle = '';
+            let statusCode = null;
 
-              // 用 Playwright 测试连通性
-              const browser = await chromium.launch({ headless: true });
-              const context_browser = await browser.newContext({
-                userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            try {
+              const response = await page.goto(cleanUrl, {
+                waitUntil: 'domcontentloaded',
+                timeout: 30000
               });
-              const page = await context_browser.newPage();
+              actualUrl = page.url();
+              pageTitle = await page.title();
+              statusCode = response ? response.status() : null;
 
-              let pageOk = false;
-              let actualUrl = cleanUrl;
-              let pageTitle = '';
-              let pageStatus = 0;
-              let pageError = '';
-
-              try {
-                const response = await page.goto(cleanUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-                actualUrl = page.url();
-                pageTitle = await page.title();
-                pageStatus = response ? response.status() : 0;
-                pageOk = response ? response.status() >= 200 && response.status() < 400 : false;
-              } catch (e) {
-                pageOk = false;
-                pageError = e.message || String(e);
+              if (!response.ok()) {
+                connError = `HTTP ${statusCode}`;
               }
+            } catch (e) {
+              connError = e.message || '无法访问';
+            }
 
-              // 连通性失败
-              if (!pageOk) {
-                const errorDetail = pageStatus ? `HTTP ${pageStatus}` : (pageError || '页面加载失败');
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issue.number,
-                  body: `❌ 友链验证失败：**${name}**
+            if (connError) {
+              await browser.close();
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `❌ 友链验证失败：**${name}**\n\n**失败原因**：网站无法访问\n- 链接: ${cleanUrl}\n- 实际访问: ${actualUrl}\n- 状态码: ${statusCode || '无'}\n- 错误: ${connError}\n\n请确认网站是否可以正常访问。`
+              });
+              return;
+            }
 
-**失败原因**：网站无法正常访问
+            // 第二步：检查友链页面是否包含 upxuu.com
+            console.log(`正在检查友链: ${cleanUrl}`);
 
-- 目标地址：\`${cleanUrl}\`
-- 实际跳转：\`${actualUrl}\`
-- 状态码：${pageStatus || '无'}
-- 详细错误：${errorDetail}
+            let hasFriendLink = false;
+            let pageContent = '';
 
-请确认网站是否可以正常访问。修复后可回复 \`/recheck\` 重新验证。`
-                });
-                await browser.close();
-                return;
-              }
-
-              // 检查友链
+            try {
               const content = await page.content();
+              pageContent = content;
+
               const allLinks = await page.evaluate(() => {
                 return Array.from(document.querySelectorAll('a[href]')).map(a => a.href);
               });
 
               const linkText = allLinks.join('\n').toLowerCase();
               const contentLower = content.toLowerCase();
-              const hasFriendLink = contentLower.includes('upxuu.com') || linkText.includes('upxuu.com');
 
+              hasFriendLink = contentLower.includes('upxuu.com') || linkText.includes('upxuu.com');
+
+              console.log(`页面标题: ${pageTitle}`);
+              console.log(`链接数量: ${allLinks.length}`);
+              console.log(`找到 upxuu.com: ${hasFriendLink}`);
+
+            } catch (e) {
+              console.log(`检查友链时出错: ${e.message}`);
+            }
+
+            if (!hasFriendLink) {
               await browser.close();
-
-              if (!hasFriendLink) {
-                await github.rest.issues.createComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issue.number,
-                  body: `❌ 友链验证失败：**${name}**
-
-**失败原因**：未在网站中找到本站友链
-
-- 检测地址：\`${actualUrl}\`
-- 页面标题：${pageTitle || '无'}
-
-请先在你的网站添加本站友链：
-- 名称：UpXuu
-- 链接：https://upxuu.com
-- 头像：https://upxuu.com/images/20260214145619.jpg
-- 描述：逐光而上
-
-添加完成后可回复 \`/recheck\` 重新验证。`
-                });
-                return;
-              }
-
-              // 验证通过，更新 friends.json
-              const friendsPath = path.join('myblog', 'public', 'data', 'friends.json');
-              let friends = [];
-
-              if (fs.existsSync(friendsPath)) {
-                friends = JSON.parse(fs.readFileSync(friendsPath, 'utf-8'));
-              }
-
-              const existingIndex = friends.findIndex(f => f.url.replace(/\/$/, '') === cleanUrl);
-
-              if (existingIndex !== -1) {
-                friends[existingIndex] = {
-                  name: name,
-                  url: cleanUrl,
-                  avatar: cleanAvatar,
-                  description: description || ''
-                };
-              } else {
-                friends.push({
-                  name: name,
-                  url: cleanUrl,
-                  avatar: cleanAvatar,
-                  description: description || ''
-                });
-              }
-
-              fs.writeFileSync(friendsPath, JSON.stringify(friends, null, 2) + '\n');
-
-              const { execSync } = require('child_process');
-              execSync('git config user.name "github-actions[bot]"');
-              execSync('git config user.email "github-actions[bot]@users.noreply.github.com"');
-              execSync(`git add ${friendsPath}`);
-              execSync(`git commit -m "🤝 更新友链: ${name} [skip ci]"`);
-              execSync('git push');
-
-              const action = existingIndex !== -1 ? '更新' : '添加';
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: issue.number,
-                body: `✅ 友链验证通过，已成功${action}友链：**${name}**
-
-**友链信息**：
-- 名称：${name}
-- 链接：${cleanUrl}
-- 描述：${description || '无'}
-- 头像：${cleanAvatar || '无'}
-
-友链已更新到 [friends.json](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/blob/main/${friendsPath})。`
+                body: `❌ 友链验证失败：**${name}**\n\n**失败原因**：未在网站中找到本站友链\n- 网站: ${actualUrl}\n- 标题: ${pageTitle}\n\n请先在你的网站添加本站友链：\n- **名称**: UpXuu\n- **链接**: https://upxuu.com\n- **头像**: https://upxuu.com/images/20260214145619.jpg\n- **描述**: 逐光而上\n\n---\n💡 添加友链后，回复「重新验证」即可重新检查。`
               });
+              return;
+            }
 
-              await github.rest.issues.update({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issue.number,
-                state: 'closed'
+            // 第三步：验证通过，更新 friends.json
+            await browser.close();
+
+            const friendsPath = path.join('myblog', 'public', 'data', 'friends.json');
+            let friends = [];
+
+            if (fs.existsSync(friendsPath)) {
+              friends = JSON.parse(fs.readFileSync(friendsPath, 'utf-8'));
+            }
+
+            const existingIndex = friends.findIndex(f => f.url.replace(/\/$/, '') === cleanUrl);
+
+            if (existingIndex !== -1) {
+              friends[existingIndex] = {
+                name: name,
+                url: cleanUrl,
+                avatar: cleanAvatar,
+                description: description || ''
+              };
+            } else {
+              friends.push({
+                name: name,
+                url: cleanUrl,
+                avatar: cleanAvatar,
+                description: description || ''
               });
             }
+
+            fs.writeFileSync(friendsPath, JSON.stringify(friends, null, 2) + '\n');
+
+            const { execSync } = require('child_process');
+            execSync('git config user.name "github-actions[bot]"');
+            execSync('git config user.email "github-actions[bot]@users.noreply.github.com"');
+            execSync(`git add ${friendsPath}`);
+            execSync(`git commit -m "🤝 更新友链: ${name} [skip ci]"`);
+            execSync('git push');
+
+            const action = existingIndex !== -1 ? '更新' : '添加';
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: `✅ 友链验证通过，已成功${action}友链：**${name}**\n\n**友链信息**：\n- 名称: ${name}\n- 链接: ${cleanUrl}\n- 描述: ${description || '无'}\n- 头像: ${cleanAvatar || '无'}\n\n友链已更新到 [friends.json](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/blob/main/${friendsPath})。`
+            });
+
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              state: 'closed'
+            });
