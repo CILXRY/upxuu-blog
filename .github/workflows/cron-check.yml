@@ -8,6 +8,8 @@ on:
 jobs:
   check-friends:
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.41.0-jammy
     permissions:
       issues: write
 
@@ -19,12 +21,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
-      - name: 安装 Playwright
-        run: |
-          npm init -y
-          npm install playwright
-          npx playwright install --with-deps chromium
 
       - name: 创建巡检脚本
         run: |
