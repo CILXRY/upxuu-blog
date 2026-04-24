@@ -26,10 +26,12 @@
 ### 申请流程
 
 1. **提交申请**: 在 [GitHub Issues](https://github.com/ImUpXuu/myblog/issues/new?template=friend-request.yml) 填写友链申请模板
-2. **自动验证**: 先测试连通性，再用 Playwright 浏览器检查友链页面是否包含 `upxuu.com`
-3. **快速审核**:
-   - ✅ **验证通过**: 自动更新 `friends.json` 推送仓库，关闭 Issue
-   - ❌ **验证失败**: 回复验证详情，标记 `需处理` 标签，不关闭 Issue
+2. **自动验证**:
+   - 第一步：curl 测试网站连通性
+   - 第二步：Playwright 浏览器检查页面是否包含 `upxuu.com` 友链
+3. **处理结果**:
+   - ✅ **验证通过**: 自动更新 `friends.json`，回复友链信息供确认，关闭 Issue
+   - ❌ **验证失败**: 回复具体失败原因（无法访问或未找到本站友链），保持 Issue 开放
 
 ### 每日自动巡检
 
@@ -46,14 +48,19 @@
 
 ### 技术实现
 
-- **数据源**: `public/data/friends.json` 存储所有友链数据
-- **自动化**: `.github/workflows/friend-link-checker.yml` 处理 Issue 并验证友链
+- **数据源**: `myblog/public/data/friends.json` 存储所有友链数据
+- **自动化**: `.github/workflows/friend-link-checker.yml` 监听 Issue 事件并自动更新友链
 - **定时巡检**: `.github/workflows/cron-check.yml` 每日检查所有友链状态
 - **模板**: `.github/ISSUE_TEMPLATE/friend-request.yml` 标准化申请格式
 
 ---
 
 ## 📅 更新日志
+
+### 2026-04-24
+- 重构友链自动化流程，基于 Issue 事件直接更新 `friends.json`
+- 新增自动去重机制（根据 URL 判断是否重复）
+- 自动关闭已处理的友链申请 Issue 并回复确认信息
 
 ### 2026-04-19
 - 修复 GitHub Action 友链验证中 Playwright 安装失败的问题（改用 `.cjs` 解决 ESM 问题）
