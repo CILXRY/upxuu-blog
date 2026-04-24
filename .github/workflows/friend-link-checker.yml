@@ -78,24 +78,26 @@ jobs:
 
             const name = extractField('网站名称', body);
             const url = extractField('网站链接', body);
+            const friendUrl = extractField('友链页面 URL', body);
             const description = extractField('网站描述', body);
             const avatar = extractField('网站头像 URL', body) || '';
 
-            if (!name || !url) {
+            if (!name || !url || !friendUrl) {
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: issue.number,
-                body: '❌ 友链信息不完整，请确保填写了网站名称和网站链接。'
+                body: '❌ 友链信息不完整，请确保填写了网站名称、网站链接和友链页面 URL。'
               });
               return;
             }
 
             const cleanUrl = url.replace(/\/$/, '');
+            const cleanFriendUrl = friendUrl.replace(/\/$/, '');
             const cleanAvatar = avatar ? avatar.trim() : '';
 
-            // 用 Playwright 测试连通性（避免 403）
-            console.log(`正在测试连通性: ${cleanUrl}`);
+            // 第一步：用 Playwright 测试友链页面（避免 403）
+            console.log(`正在检查友链页面: ${cleanFriendUrl}`);
             const browser = await chromium.launch({ headless: true });
             const context_browser = await browser.newContext({
               userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -103,12 +105,12 @@ jobs:
             const page = await context_browser.newPage();
 
             let connError = null;
-            let actualUrl = cleanUrl;
+            let actualUrl = cleanFriendUrl;
             let pageTitle = '';
             let statusCode = null;
 
             try {
-              const response = await page.goto(cleanUrl, {
+              const response = await page.goto(cleanFriendUrl, {
                 waitUntil: 'domcontentloaded',
                 timeout: 30000
               });
@@ -129,13 +131,13 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: issue.number,
-                body: `❌ 友链验证失败：**${name}**\n\n**失败原因**：网站无法访问\n- 链接: ${cleanUrl}\n- 实际访问: ${actualUrl}\n- 状态码: ${statusCode || '无'}\n- 错误: ${connError}\n\n请确认网站是否可以正常访问。`
+                body: `❌ 友链验证失败：**${name}**\n\n**失败原因**：友链页面无法访问\n- 链接: ${cleanFriendUrl}\n- 实际访问: ${actualUrl}\n- 状态码: ${statusCode || '无'}\n- 错误: ${connError}\n\n请确认友链页面是否可以正常访问。`
               });
               return;
             }
 
             // 第二步：检查友链页面是否包含 upxuu.com
-            console.log(`正在检查友链: ${cleanUrl}`);
+            console.log(`正在检查友链: ${cleanFriendUrl}`);
 
             let hasFriendLink = false;
             let pageContent = '';
