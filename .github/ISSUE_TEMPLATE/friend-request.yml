@@ -40,6 +40,15 @@ body:
       required: true
 
   - type: input
+    id: friend_url
+    attributes:
+      label: "友链页面 URL"
+      description: "你网站上添加本站友链的页面链接（可选）"
+      placeholder: "https://example.com/friends"
+    validations:
+      required: false
+
+  - type: input
     id: description
     attributes:
       label: "网站描述"
