@@ -2,11 +2,10 @@ name: 🤝 自动更新友链
 
 on:
   issues:
-    types: [opened, labeled]
+    types: [opened]
 
 jobs:
   update-friends:
-    if: contains(github.event.issue.labels.*.name, '友链申请')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -40,6 +39,12 @@ jobs:
 
             const issue = context.payload.issue;
             const body = issue.body || '';
+
+            // 检查是否来自友链申请模板
+            if (!body.includes('### 网站名称') || !body.includes('### 网站链接')) {
+              console.log('非友链申请 issue，跳过');
+              return;
+            }
 
             function extractField(name, text) {
               const regex = new RegExp(`### ${name}\\s*\\n([^#]+)`, 'i');
@@ -102,17 +107,13 @@ jobs:
             
             let hasFriendLink = false;
             let actualUrl = cleanUrl;
-            let pageTitle = '';
 
             try {
               await page.goto(cleanUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
               actualUrl = page.url();
-              pageTitle = await page.title();
 
-              // 检查页面内容
               const content = await page.content();
               
-              // 检查页面所有链接
               const allLinks = await page.evaluate(() => {
                 return Array.from(document.querySelectorAll('a[href]')).map(a => a.href);
               });
@@ -120,7 +121,6 @@ jobs:
               const linkText = allLinks.join('\n').toLowerCase();
               const contentLower = content.toLowerCase();
 
-              // 检查是否包含 upxuu.com
               hasFriendLink = contentLower.includes('upxuu.com') || linkText.includes('upxuu.com');
 
             } catch (e) {
