@@ -42,6 +42,19 @@ const jsonLd = {
 					🤝 友情链接
 				</h1>
 			</div>
+
+			<div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 mb-8 border border-blue-200 dark:border-blue-800">
+				<h2 class="text-lg font-semibold text-blue-800 dark:text-blue-300 mb-2">📝 自助申请友链</h2>
+				<p class="text-sm text-blue-700 dark:text-blue-400 mb-3">点击下方链接自助申请友链</p>
+				<a
+					href="https://github.com/ImUpXuu/myblog/issues/new?template=friend-request.yml"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+				>
+					<span>🆕 新建友链申请</span>
+				</a>
+			</div>
 			
 			<div class="friends-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 				{friends.map((friend) => (

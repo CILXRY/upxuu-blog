@@ -77,8 +77,8 @@ jobs:
             }
 
             const name = extractField('网站名称', body);
-            const description = extractField('网站描述', body);
             const url = extractField('网站链接', body);
+            const description = extractField('网站描述', body);
             const avatar = extractField('网站头像 URL', body) || '';
 
             if (!name || !url) {
@@ -206,7 +206,7 @@ jobs:
             execSync('git config user.name "github-actions[bot]"');
             execSync('git config user.email "github-actions[bot]@users.noreply.github.com"');
             execSync(`git add ${friendsPath}`);
-            execSync(`git commit -m "🤝 更新友链: ${name} [skip ci]"`);
+            execSync(`git commit -m "🤝 更新友链: ${name}"`);
             execSync('git push');
 
             const action = existingIndex !== -1 ? '更新' : '添加';
@@ -214,7 +214,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: issue.number,
-              body: `✅ 友链验证通过，已成功${action}友链：**${name}**\n\n**友链信息**：\n- 名称: ${name}\n- 链接: ${cleanUrl}\n- 描述: ${description || '无'}\n- 头像: ${cleanAvatar || '无'}\n\n友链已更新到 [friends.json](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/blob/main/${friendsPath})。`
+              body: `✅ 你的网站 **${name}** (${cleanUrl}) 已成功添加到 UpXuu 的友链中啦~\n\n**友链信息**：\n- 名称: ${name}\n- 链接: ${cleanUrl}\n- 描述: ${description || '无'}\n- 头像: ${cleanAvatar || '无'}`
             });
 
             await github.rest.issues.update({
