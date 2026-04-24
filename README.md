@@ -27,11 +27,12 @@
 
 1. **提交申请**: 在 [GitHub Issues](https://github.com/ImUpXuu/myblog/issues/new?template=friend-request.yml) 填写友链申请模板
 2. **自动验证**:
-   - 第一步：curl 测试网站连通性
-   - 第二步：Playwright 浏览器检查页面是否包含 `upxuu.com` 友链
+   - 第一步：Playwright 模拟浏览器测试网站连通性
+   - 第二步：检查页面是否包含 `upxuu.com` 友链
 3. **处理结果**:
    - ✅ **验证通过**: 自动更新 `friends.json`，回复友链信息供确认，关闭 Issue
-   - ❌ **验证失败**: 回复具体失败原因（无法访问或未找到本站友链），保持 Issue 开放
+   - ❌ **验证失败**: 回复详细失败原因（目标地址、跳转地址、状态码、错误信息），保持 Issue 开放
+4. **重新验证**: 修复问题后在 issue 评论 `/recheck` 即可重新检测
 
 ### 每日自动巡检
 
