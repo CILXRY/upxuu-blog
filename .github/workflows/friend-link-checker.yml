@@ -53,17 +53,11 @@ jobs:
               return;
             }
 
-            // 评论触发时检查是否有 "重新验证" 的意图
+            // 评论触发时，只有 issue 作者评论才重新验证
             if (isComment) {
-              const comment = context.payload.comment.body.trim().toLowerCase();
-              const commenter = context.payload.comment.user.login;
-              const isAuthor = comment.author === issue.user.login;
-              const wantsRerun = comment.includes('重新验证') || comment.includes('retry') ||
-                comment.includes('重新检查') || comment === '/verify';
-
-              // 只有作者回复失败信息才重新验证
-              if (!isAuthor || !wantsRerun) {
-                console.log('评论不是来自作者或没有重新验证请求，跳过');
+              const isAuthor = context.payload.comment.user.login === issue.user.login;
+              if (!isAuthor) {
+                console.log('评论不是来自作者，跳过');
                 return;
               }
               console.log('作者请求重新验证');
