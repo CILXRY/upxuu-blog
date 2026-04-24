@@ -15,6 +15,9 @@ jobs:
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 提取 Issue 内容
         id: extract
@@ -58,7 +61,10 @@ jobs:
 
       - name: 输出提取结果
         id: extracted
-        run: cat /tmp/extracted.txt >> $GITHUB_OUTPUT
+        run: |
+          while IFS='=' read -r key value; do
+            echo "$key=$value" >> $GITHUB_OUTPUT
+          done < /tmp/extracted.txt
 
       - name: 安装 Node.js
         uses: actions/setup-node@v4
@@ -259,7 +265,7 @@ jobs:
           
           if ! git diff --cached --quiet; then
             git commit -m "feat: 添加友链 ${{ steps.extracted.outputs.name }}"
-            git push
+            git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:${{ github.ref }}
             echo "✅ 已提交并推送"
           else
             echo "友链已存在，无需更新"
