@@ -1,10 +1,11 @@
----
+***
+
 title: "友链自助申请系统上线啦"
 published: 2026-04-24
 description: "博客友链申请流程已全面自动化，基于 GitHub Issues 和 Actions 实现"
-tags: ["技术", "博客", "GitHub Actions"]
+tags: \["技术", "博客", "GitHub Actions"]
 category: "技术"
----
+--------------
 
 博客的友链申请系统全新上线啦！现在申请友链完全自动化，只需要填写一个表单，系统就会自动完成验证和添加。
 
@@ -26,21 +27,16 @@ category: "技术"
 点击友链页面右上角的「新建友链申请」按钮，或直接访问 [GitHub Issues](https://github.com/ImUpXuu/myblog/issues/new?template=friend-request.yml) 填写申请表单。
 
 需要填写的信息：
+
 - **网站名称**：你的网站名字
-
 - **网站链接**：你的网站首页
-
 - **友链页面 URL**：你网站上添加了本站友链的页面地址（必填）
-
 - **网站描述**：简短介绍一下你的网站
-
-- **网站头像 URL**：可选，你的网站头像
-
-  <img src="https://edit.upxuu.com/img/2026/4/25/1777073716565_207.png" alt="image-20260425073516248" style="zoom:67%;" />
 
 ### 第三步：等待验证
 
 提交后，系统会自动检查：
+
 1. 你的友链页面是否可以正常访问
 2. 页面中是否包含 UpXuu 的友链
 
@@ -48,7 +44,7 @@ category: "技术"
 
 ### 第四步：触发vercel发起构建
 
-你的友链将在3min内被添加至本站 喵~
+你的友链将在3min内被添加至本站 喵\~
 
 ![image-20260425073835372](https://edit.upxuu.com/img/2026/4/25/1777073915536_212.png)
 
@@ -89,15 +85,16 @@ Vercel 触发构建 → 网站更新
 #### 3. GitHub Actions 自动部署
 
 验证通过后，Action 会自动：
+
 - Stash 本地更改
 - Pull 远程最新代码
-- 添加友链到 `public/data/friends.json`（包含 issue_id）
+- 添加友链到 `public/data/friends.json`（包含 issue\_id）
 - Commit 并 Push
 - 触发 Vercel 重新构建部署
 
 #### 4. 友链与 Issue 关联
 
-每条通过 Issues 添加的友链都会记录对应的 issue_id，每日巡检发现异常时会自动在该 Issue 下评论通知，并标记「友链异常」标签。
+每条通过 Issues 添加的友链都会记录对应的 issue\_id，每日巡检发现异常时会自动在该 Issue 下评论通知，并标记「友链异常」标签。
 
 ### 相关文件
 
@@ -109,9 +106,10 @@ Vercel 触发构建 → 网站更新
 ## 每日巡检
 
 每天 16:00 (UTC+8) 会自动检查所有友链的连通性。如果发现异常：
+
 - 对于通过 Issues 添加的友链，会在该 Issue 下评论通知并标记异常
 - 所有巡检结果汇总到巡检报告 Issue 中
 
----
+***
 
-有什么问题可以在 [GitHub Issues](https://github.com/ImUpXuu/myblog/issues) 里提，也可以直接评论哦~
+有什么问题可以在 [GitHub Issues](https://github.com/ImUpXuu/myblog/issues) 里提，也可以直接评论哦\~
