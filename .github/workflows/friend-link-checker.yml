@@ -141,6 +141,12 @@ jobs:
                 issue_number: issue.number,
                 body: `❌ 友链验证失败：**${name}**\n\n**失败原因**：友链页面无法访问\n- 链接: ${cleanFriendUrl}\n- 实际访问: ${actualUrl}\n- 状态码: ${statusCode || '无'}\n- 错误: ${connError}\n\n请确认友链页面是否可以正常访问。`
               });
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: ['needs-update']
+              });
               return;
             }
 
@@ -182,6 +188,12 @@ jobs:
                 repo: context.repo.repo,
                 issue_number: issue.number,
                 body: `❌ 友链验证失败：**${name}**\n\n**失败原因**：未在网站中找到本站友链\n- 网站: ${actualUrl}\n- 标题: ${pageTitle}\n\n请先在你的网站添加本站友链：\n- **名称**: UpXuu\n- **链接**: https://upxuu.com\n- **头像**: https://upxuu.com/images/20260214145619.jpg\n- **描述**: 逐光而上\n\n---\n💡 添加友链后，回复本评论即可重新检查。`
+              });
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: ['needs-update']
               });
               return;
             }

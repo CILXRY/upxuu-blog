@@ -130,7 +130,7 @@ jobs:
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     issue_number: f.issue_id,
-                    labels: ['友链异常']
+                    labels: ['needs-update']
                   });
                   console.log(`已通知 issue #${f.issue_id}`);
                 } catch (e) {

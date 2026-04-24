@@ -12,7 +12,7 @@ category: "技术"
 
 ### 第一步：准备友链信息
 
-在你的网站上添加 UpXuu 的友链：
+在你网站的友链页面添加 UpXuu 的友链：
 
 ```yaml
 名称: UpXuu
@@ -28,7 +28,7 @@ category: "技术"
 需要填写的信息：
 - **网站名称**：你的网站名字
 - **网站链接**：你的网站首页
-- **友链页面 URL**：你网站上添加了本站友链的页面地址
+- **友链页面 URL**：你网站上添加了本站友链的页面地址（必填）
 - **网站描述**：简短介绍一下你的网站
 - **网站头像 URL**：可选，你的网站头像
 
@@ -38,7 +38,7 @@ category: "技术"
 1. 你的友链页面是否可以正常访问
 2. 页面中是否包含 UpXuu 的友链
 
-验证通过后，友链会自动添加到博客，无需人工干预！
+验证过程中 Issue 会标记为「验证中」，通过后会自动关闭 Issue。
 
 ### 验证失败怎么办
 
@@ -70,31 +70,33 @@ Vercel 触发构建 → 网站更新
 
 #### 2. Playwright 浏览器自动化
 
-使用 Playwright 模拟真实浏览器访问，可以绕过 Cloudflare 等反爬机制，同时检查页面内容和所有链接。
+使用 Playwright 模拟真实浏览器访问，可以绕过 Cloudflare 等反爬机制，同时检查页面内容和所有链接。配置了 12 秒超时和 3 次重试，提高稳定性。
 
 #### 3. GitHub Actions 自动部署
 
 验证通过后，Action 会自动：
 - Stash 本地更改
 - Pull 远程最新代码
-- 添加友链到 `public/data/friends.json`
+- 添加友链到 `public/data/friends.json`（包含 issue_id）
 - Commit 并 Push
 - 触发 Vercel 重新构建部署
+
+#### 4. 友链与 Issue 关联
+
+每条通过 Issues 添加的友链都会记录对应的 issue_id，每日巡检发现异常时会自动在该 Issue 下评论通知，并标记「友链异常」标签。
 
 ### 相关文件
 
 - [friend-link-checker.yml](https://github.com/ImUpXuu/myblog/blob/main/.github/workflows/friend-link-checker.yml) - 自动化工作流
+- [cron-check.yml](https://github.com/ImUpXuu/myblog/blob/main/.github/workflows/cron-check.yml) - 每日巡检工作流
 - [friend-request.yml](https://github.com/ImUpXuu/myblog/blob/main/.github/ISSUE_TEMPLATE/friend-request.yml) - 申请表单模板
 - [friends.json](https://github.com/ImUpXuu/myblog/blob/main/public/data/friends.json) - 友链数据
 
 ## 每日巡检
 
-除了申请自动化，博客还有每日巡检功能。每天 UTC 16:00（北京时间次日 00:00）会自动检查所有友链：
-
-- 网站是否可以访问
-- 是否仍然包含本站友链
-
-如果发现问题，会自动创建巡检报告 Issue 提醒。
+每天 16:00 (UTC+8) 会自动检查所有友链的连通性。如果发现异常：
+- 对于通过 Issues 添加的友链，会在该 Issue 下评论通知并标记异常
+- 所有巡检结果汇总到巡检报告 Issue 中
 
 ---
 
