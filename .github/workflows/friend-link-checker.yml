@@ -245,6 +245,14 @@ jobs:
               body: `✅ 你的网站 **${name}** (${cleanUrl}) 已成功添加到 UpXuu 的友链中啦~\n\n**友链信息**：\n- 名称: ${name}\n- 链接: ${cleanUrl}\n- 描述: ${description || '无'}\n- 头像: ${cleanAvatar || '无'}`
             });
 
+            // 移除验证中标签
+            await github.rest.issues.removeLabel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              name: '验证中'
+            });
+
             await github.rest.issues.update({
               owner: context.repo.owner,
               repo: context.repo.repo,
