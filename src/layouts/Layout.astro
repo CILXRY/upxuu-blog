@@ -21,6 +21,7 @@ import { defaultFavicons } from "../constants/icon";
 import type { Favicon } from "../types/config";
 import { pathsEqual, url } from "../utils/url-utils";
 import "katex/dist/katex.css";
+import background from "../assets/images/background.jpg";
 
 interface Props {
 	title?: string;
@@ -78,7 +79,7 @@ const bannerOffset =
 <html
 	lang={siteLang}
 	class="bg-[var(--page-bg)] transition text-[14px] md:text-[16px]"
-	style="background-image:url('https://f.xxu6.top/2427/in.jpg');background-position:center;background-repeat:no-repeat;background-size:cover;background-attachment:fixed;"
+	style={`background-image:url('${background.src}');background-position:center;background-repeat:no-repeat;background-size:cover;background-attachment:fixed;`}
 	  data-overlayscrollbars-initialize
 >
 	<head>
