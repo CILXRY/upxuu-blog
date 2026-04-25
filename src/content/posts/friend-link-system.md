@@ -26,6 +26,8 @@ category: "技术"
 
 点击友链页面右上角的「新建友链申请」按钮，或直接访问 [GitHub Issues](https://github.com/ImUpXuu/myblog/issues/new?template=friend-request.yml) 填写申请表单。
 
+<img src="https://edit.upxuu.com/img/2026/4/25/1777081043498_354.png" alt="image-20260425093722735" style="zoom:50%;" />
+
 需要填写的信息：
 
 - **网站名称**：你的网站名字
