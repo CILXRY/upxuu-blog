@@ -47,33 +47,56 @@ const jsonLd = isFirstPage ? {
 </MainGridLayout>
 
 <script>
-// 批量获取首页文章的访问量和点赞数
+function animateNumber(el, target) {
+    const duration = 800;
+    const start = 0;
+    const startTime = performance.now();
+
+    function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(start + (target - start) * eased);
+        el.textContent = current.toLocaleString('zh-CN');
+        if (progress < 1) {
+            requestAnimationFrame(update);
+        }
+    }
+    requestAnimationFrame(update);
+}
+
 function fetchHomepageStats() {
-    const apiUrl = 'https://comment.upxuu.com';
     const postCards = document.querySelectorAll('[data-post-url]');
 
     for (const card of postCards) {
         const pageUrl = card.getAttribute('data-post-url');
         if (!pageUrl) continue;
 
-        fetch(`${apiUrl}/page-stats?url=${encodeURIComponent(pageUrl)}`)
+        const pathWithSlash = pageUrl.endsWith('/') ? pageUrl : pageUrl + '/';
+        const apiUrl = `https://upxuu.com/statsapi/alltime?path=${encodeURIComponent(pathWithSlash)}`;
+
+        const viewsEl = card.querySelector('.post-views');
+        if (!viewsEl) continue;
+
+        viewsEl.innerHTML = '<svg class="animate-spin h-3.5 w-3.5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+
+        fetch(apiUrl)
             .then(res => res.ok ? res.json() : null)
             .then(data => {
-                if (!data) return;
-                const viewsEl = card.querySelector('.post-views');
-                const likesEl = card.querySelector('.post-likes');
-                if (viewsEl) viewsEl.textContent = data.views || 0;
-                if (likesEl) likesEl.textContent = data.likes || 0;
+                if (!data || !data.pageviews) {
+                    viewsEl.textContent = '0';
+                    return;
+                }
+                animateNumber(viewsEl, data.pageviews);
             })
-            .catch(() => {});
+            .catch(() => {
+                viewsEl.textContent = '-';
+            });
     }
 }
 
-// 将函数暴露到全局作用域，供 Swup 页面切换时调用
 (window as any).fetchHomepageStats = fetchHomepageStats;
 
-// 等待 DOM 加载完成后获取统计数据
-// 使用 setTimeout 确保 Swup 切换后 DOM 已经完全渲染
 setTimeout(() => {
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', fetchHomepageStats);

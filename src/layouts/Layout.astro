@@ -390,22 +390,47 @@ function init() {
 /* Load settings when entering the site */
 init();
 
+function animateNumber(el, target) {
+    const duration = 800;
+    const start = 0;
+    const startTime = performance.now();
+
+    function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(start + (target - start) * eased);
+        el.textContent = current.toLocaleString('zh-CN');
+        if (progress < 1) {
+            requestAnimationFrame(update);
+        }
+    }
+    requestAnimationFrame(update);
+}
+
 function fetchPageStats() {
-    const pageUrl = window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/';
-    const apiUrl = 'https://upxuu.com/statsapi/alltime';
+    const pageUrl = window.location.pathname;
+    const pathWithSlash = pageUrl.endsWith('/') ? pageUrl : pageUrl + '/';
+    const apiUrl = `https://upxuu.com/statsapi/alltime?path=${encodeURIComponent(pathWithSlash)}`;
 
     const viewsEl = document.getElementById('post-views') || document.querySelector('.post-views');
-    const likesEl = document.getElementById('post-likes') || document.querySelector('.post-likes');
 
-    if (!viewsEl && !likesEl) return;
+    if (!viewsEl) return;
 
-    fetch(`${apiUrl}?path=${encodeURIComponent(pageUrl)}`)
+    viewsEl.innerHTML = '<svg class="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+
+    fetch(apiUrl)
         .then(res => res.ok ? res.json() : null)
         .then(data => {
-            if (!data) return;
-            if (viewsEl && data.pageviews) viewsEl.textContent = data.pageviews.toLocaleString('zh-CN');
+            if (!data || !data.pageviews) {
+                viewsEl.textContent = '0';
+                return;
+            }
+            animateNumber(viewsEl, data.pageviews);
         })
-        .catch(() => {});
+        .catch(() => {
+            viewsEl.textContent = '-';
+        });
 }
 
 (window as any).fetchPageStats = fetchPageStats;
