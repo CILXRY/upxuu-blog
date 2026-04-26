@@ -25,11 +25,11 @@ async function fetchUmamiStats() {
         const response = await fetch('https://upxuu.com/statsapi/alltime?path=/about/');
         if (!response.ok) throw new Error('Failed to fetch');
         const data = await response.json();
-        
+
         const viewsEl = document.getElementById('total-views');
         const visitorsEl = document.getElementById('total-visitors');
         const visitsEl = document.getElementById('total-visits');
-        
+
         if (viewsEl && data.pageviews) {
             viewsEl.textContent = data.pageviews.toLocaleString('zh-CN');
         }

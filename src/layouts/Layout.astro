@@ -391,20 +391,19 @@ function init() {
 init();
 
 function fetchPageStats() {
-    const pageUrl = window.location.pathname;
-    const apiUrl = 'https://comment.upxuu.com';
+    const pageUrl = window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/';
+    const apiUrl = 'https://upxuu.com/statsapi/alltime';
 
     const viewsEl = document.getElementById('post-views') || document.querySelector('.post-views');
     const likesEl = document.getElementById('post-likes') || document.querySelector('.post-likes');
 
     if (!viewsEl && !likesEl) return;
 
-    fetch(`${apiUrl}/page-stats?url=${encodeURIComponent(pageUrl)}`)
+    fetch(`${apiUrl}?path=${encodeURIComponent(pageUrl)}`)
         .then(res => res.ok ? res.json() : null)
         .then(data => {
             if (!data) return;
-            if (viewsEl) viewsEl.textContent = data.views || 0;
-            if (likesEl) likesEl.textContent = data.likes || 0;
+            if (viewsEl && data.pageviews) viewsEl.textContent = data.pageviews.toLocaleString('zh-CN');
         })
         .catch(() => {});
 }
