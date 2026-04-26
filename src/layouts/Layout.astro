@@ -586,47 +586,25 @@ window.onresize = () => {
 
 // Mobile TOC interactions
 (function() {
-    const tocBtn = document.getElementById('mobile-toc-btn');
-    const tocPanel = document.getElementById('mobile-toc-panel');
-    const tocBackdrop = document.getElementById('mobile-toc-backdrop');
-    const tocClose = document.getElementById('mobile-toc-close');
-    const progressText = document.getElementById('mobile-toc-progress-text');
-
-    if (!tocBtn || !tocPanel || !tocBackdrop) return;
+    let tocBtn: HTMLElement | null = null;
+    let tocPanel: HTMLElement | null = null;
+    let tocBackdrop: HTMLElement | null = null;
+    let tocClose: HTMLElement | null = null;
+    let progressText: HTMLElement | null = null;
 
     function openToc() {
+        if (!tocPanel || !tocBackdrop) return;
         tocPanel.style.transform = 'translateY(0)';
         tocBackdrop.classList.remove('hidden');
-        setTimeout(() => {
-            tocBackdrop.style.opacity = '1';
-        }, 10);
+        setTimeout(() => { tocBackdrop!.style.opacity = '1'; }, 10);
     }
 
     function closeToc() {
+        if (!tocPanel || !tocBackdrop) return;
         tocPanel.style.transform = 'translateY(100%)';
         tocBackdrop.style.opacity = '0';
-        setTimeout(() => {
-            tocBackdrop.classList.add('hidden');
-        }, 300);
+        setTimeout(() => { tocBackdrop!.classList.add('hidden'); }, 300);
     }
-
-    tocBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (tocPanel.style.transform === 'translateY(0px)') {
-            closeToc();
-        } else {
-            openToc();
-        }
-    });
-
-    tocClose?.addEventListener('click', closeToc);
-    tocBackdrop?.addEventListener('click', closeToc);
-
-    tocPanel?.addEventListener('click', (e) => {
-        if ((e.target as HTMLElement).closest('a[href^="#"]')) {
-            setTimeout(closeToc, 150);
-        }
-    });
 
     function updateProgress() {
         if (!progressText) return;
@@ -636,14 +614,49 @@ window.onresize = () => {
         progressText.textContent = progress + '%';
     }
 
-    window.addEventListener('scroll', updateProgress, { passive: true });
-    updateProgress();
+    function setupMobileToc() {
+        tocBtn = document.getElementById('mobile-toc-btn');
+        tocPanel = document.getElementById('mobile-toc-panel');
+        tocBackdrop = document.getElementById('mobile-toc-backdrop');
+        tocClose = document.getElementById('mobile-toc-close');
+        progressText = document.getElementById('mobile-toc-progress-text');
 
-    window.swup?.hooks?.on('page:view', () => {
+        if (!tocBtn || !tocPanel || !tocBackdrop) return;
+
+        tocBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (tocPanel!.style.transform === 'translateY(0px)') {
+                closeToc();
+            } else {
+                openToc();
+            }
+        };
+
+        tocClose!.onclick = closeToc;
+        tocBackdrop!.onclick = closeToc;
+
+        tocPanel!.onclick = (e) => {
+            if ((e.target as HTMLElement).closest('a[href^="#"]')) {
+                setTimeout(closeToc, 150);
+            }
+        };
+
+        window.removeEventListener('scroll', updateProgress);
+        window.addEventListener('scroll', updateProgress, { passive: true });
         updateProgress();
-    });
+    }
 
     window.addEventListener('popstate', closeToc);
+
+    setupMobileToc();
+
+    if (window.swup) {
+        window.swup.hooks.on('page:view', setupMobileToc);
+    } else {
+        document.addEventListener('swup:enable', () => {
+            window.swup!.hooks.on('page:view', setupMobileToc);
+        });
+    }
 })();
 
 </script>

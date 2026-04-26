@@ -16,6 +16,7 @@ import PostMetadata from "../../components/PostMeta.astro";
 import { profileConfig, siteConfig } from "../../config";
 import { formatDateToYYYYMMDD } from "../../utils/date-utils";
 import Waline from "../../components/Waline.astro";
+import MobileToc from "../../components/widget/MobileToc.astro";
 
 export async function getStaticPaths() {
 	const blogEntries = await getSortedPosts();
@@ -62,7 +63,7 @@ const jsonLd = {
 	}
 };
 ---
-<MainGridLayout banner={entry.data.image} title={entry.data.title} description={entry.data.description} lang={entry.data.lang} setOGTypeArticle={true} headings={headings} isPost={true}>
+<MainGridLayout banner={entry.data.image} title={entry.data.title} description={entry.data.description} lang={entry.data.lang} setOGTypeArticle={true} headings={headings}>
     <BannerTitle slot="banner-title"></BannerTitle>
     <script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify(jsonLd)}></script>
     {/* 哀悼模式：全页黑白 */}
@@ -179,6 +180,25 @@ const jsonLd = {
             </div>}
         </a>
     </div>
+
+    <!-- Mobile TOC (placed here so Swup replaces it on page transitions) -->
+    {headings.length > 0 && <>
+        <button id="mobile-toc-btn" class="lg:hidden fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full bg-[var(--card-bg)] border border-[var(--line-color)] shadow-lg flex items-center justify-center text-sm font-bold text-[var(--btn-content)] transition-all active:scale-95" aria-label="目录">
+            <span id="mobile-toc-progress-text">0%</span>
+        </button>
+        <div id="mobile-toc-backdrop" class="lg:hidden fixed inset-0 bg-black/40 z-[60] hidden transition-opacity duration-300 opacity-0"></div>
+        <div id="mobile-toc-panel" class="lg:hidden fixed bottom-0 left-0 right-0 z-[61] rounded-t-2xl bg-[var(--page-bg)] shadow-2xl transition-transform duration-300 ease-out max-h-[70vh] overflow-hidden" style="transform: translateY(100%)">
+            <div class="flex items-center justify-between px-4 py-3 border-b border-[var(--line-color)]">
+                <span class="text-sm font-bold text-[var(--deep-text)]">目录</span>
+                <button id="mobile-toc-close" class="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--btn-content)] hover:bg-[var(--btn-regular-bg-hover)] transition" aria-label="关闭">
+                    <Icon name="material-symbols:close-rounded" class="text-xl"></Icon>
+                </button>
+            </div>
+            <div id="mobile-toc" class="overflow-y-auto hide-scrollbar max-h-[calc(70vh_-_3.5rem)]">
+                <MobileToc headings={headings}></MobileToc>
+            </div>
+        </div>
+    </>}
 
 </MainGridLayout>
 
