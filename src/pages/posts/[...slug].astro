@@ -181,7 +181,7 @@ const jsonLd = {
         </a>
     </div>
 
-    <!-- Mobile TOC Panel + Backdrop (inside Swup slot so headings update on page transitions) -->
+    <!-- Mobile TOC Panel + Backdrop -->
     {headings.length > 0 && <>
         <div id="mobile-toc-backdrop" class="lg:hidden fixed inset-0 bg-black/40 z-[60] hidden transition-opacity duration-300 opacity-0"></div>
         <div id="mobile-toc-panel" class="lg:hidden fixed bottom-0 left-0 right-0 z-[61] rounded-t-2xl bg-[var(--page-bg)] shadow-2xl transition-transform duration-300 ease-out max-h-[70vh] overflow-hidden" style="transform: translateY(100%)">
@@ -198,6 +198,24 @@ const jsonLd = {
     </>}
 
 </MainGridLayout>
+
+<script>
+function relocateMobileToc() {
+    const panel = document.getElementById('mobile-toc-panel');
+    const backdrop = document.getElementById('mobile-toc-backdrop');
+    const slot = document.getElementById('mobile-toc-slot');
+    if (!panel || !slot) return;
+    if (panel.parentElement !== slot) {
+        if (backdrop) slot.insertBefore(backdrop, slot.firstChild);
+        slot.appendChild(panel);
+    }
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', relocateMobileToc);
+} else {
+    relocateMobileToc();
+}
+</script>
 
 <script>
 // 页面加载时获取统计数据

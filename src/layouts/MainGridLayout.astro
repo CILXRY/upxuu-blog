@@ -91,6 +91,8 @@ const mainPanelTop = siteConfig.banner.enable
                     <!-- make id different from windows.swup global property -->
                     <slot></slot>
                 </div>
+                <!-- Mobile TOC panel (outside #content-wrapper to avoid fixed positioning being clipped by parent transform) -->
+                <div id="mobile-toc-slot"></div>
             </main>
 
             <div class="footer col-span-2 onload-animation">
