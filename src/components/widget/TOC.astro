@@ -33,8 +33,9 @@ const maxLevel = siteConfig.toc.depth;
 ---
 {isPostsRoute &&
 <table-of-contents class:list={[className, "group"]}>
+    <div id="toc-inner-wrapper" class="p-3 rounded-xl bg-[var(--toc-bg)] transition-colors">
     {headings.filter((heading) => heading.depth < minDepth + maxLevel).map((heading) =>
-            <a href={`#${heading.slug}`} class="px-2 flex gap-2 relative transition w-full min-h-9 rounded-xl
+            <a href={`#${heading.slug}`} class="px-2 flex gap-2 relative transition w-full min-h-9 rounded-lg
         hover:bg-[var(--toc-btn-hover)] active:bg-[var(--toc-btn-active)] py-2
     ">
                 <div class:list={["transition w-5 h-5 shrink-0 rounded-lg text-xs flex items-center justify-center font-bold",
@@ -55,8 +56,9 @@ const maxLevel = siteConfig.toc.depth;
                 }]}>{removeTailingHash(heading.text)}</div>
             </a>
     )}
-    <div id="active-indicator" style="opacity: 0" class:list={[{'hidden': headings.length == 0}, "-z-10 absolute bg-[var(--toc-btn-hover)] left-0 right-0 rounded-xl transition-all " +
+    <div id="active-indicator" style="opacity: 0" class:list={[{'hidden': headings.length == 0}, "-z-10 absolute bg-[var(--toc-btn-hover)] left-0 right-0 rounded-lg transition-all " +
         "group-hover:bg-transparent border-2 border-[var(--toc-btn-hover)] group-hover:border-[var(--toc-btn-active)] border-dashed"]}></div>
+    </div>
 </table-of-contents>}
 
 <script>
