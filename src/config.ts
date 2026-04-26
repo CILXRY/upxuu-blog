@@ -73,6 +73,11 @@ export const navBarConfig: NavBarConfig = {
 					url: "https://stats.upxuu.com/share/sFftlqBkgk2z9JM2",
 					external: true,
 				},
+				{
+					name: "QQ群",
+					url: "/q",
+					external: false,
+				},
 			],
 		},
 		{
