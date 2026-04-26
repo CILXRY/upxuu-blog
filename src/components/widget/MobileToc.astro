@@ -1,131 +1,273 @@
 ---
 import type { MarkdownHeading } from "astro";
+import { siteConfig } from "../../config";
+import { url } from "../../utils/url-utils";
 
 interface Props {
-    headings?: MarkdownHeading[];
+	headings: MarkdownHeading[];
 }
 
 const { headings = [] } = Astro.props;
 
 let minDepth = 10;
-for (const h of headings) {
-    minDepth = Math.min(minDepth, h.depth);
+for (const heading of headings) {
+	minDepth = Math.min(minDepth, heading.depth);
 }
 
-const maxLevel = 3;
-let heading1Count = 0;
-
-const removeHash = (text: string) => {
-    const i = text.lastIndexOf('#');
-    return i === text.length - 1 ? text.substring(0, i) : text;
+const removeTailingHash = (text: string) => {
+	let lastIndexOfHash = text.lastIndexOf("#");
+	if (lastIndexOfHash !== text.length - 1) {
+		return text;
+	}
+	return text.substring(0, lastIndexOfHash);
 };
+
+let heading1Count = 1;
+const maxLevel = siteConfig.toc.depth;
 ---
 
-<button id="mobile-toc-btn" class="fixed bottom-5 right-5 w-12 h-12 rounded-full bg-[var(--primary)] text-white font-bold text-xs shadow-lg flex items-center justify-center lg:hidden z-[60] active:scale-90 transition-transform">
-    <span id="mobile-toc-progress-text">0%</span>
-</button>
-
-<div id="mobile-toc-backdrop" class="fixed inset-0 z-[70] hidden opacity-0 transition-opacity duration-300 lg:hidden"></div>
-
-<div id="mobile-toc-panel" class="fixed right-5 z-[80] lg:hidden transition-all duration-300" style="bottom: calc(4.5rem + 4px);">
-    <div class="w-64 bg-[var(--card-bg)] border border-[var(--line-color)] rounded-2xl shadow-xl overflow-hidden">
-        <div class="flex items-center justify-between px-4 py-3 border-b border-[var(--line-color)]">
-            <span class="font-bold">目录</span>
-            <button id="mobile-toc-close" class="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-[var(--toc-btn-hover)] active:bg-[var(--toc-btn-active)] transition">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-            </button>
-        </div>
-        <div class="p-2 max-h-[50vh] overflow-y-auto">
-            <div id="mobile-toc-inner">
-            {headings.length > 0 ? headings.filter((h) => h.depth < minDepth + maxLevel).map((h) => {
-                let badge = '';
-                if (h.depth === minDepth) {
-                    heading1Count++;
-                    badge = `<div class="transition w-5 h-5 shrink-0 rounded-lg text-xs flex items-center justify-center font-bold bg-[var(--toc-badge-bg)] text-[var(--btn-content)]">${heading1Count}</div>`;
-                } else if (h.depth === minDepth + 1) {
-                    badge = `<div class="ml-4 transition w-5 h-5 shrink-0 rounded-lg text-xs flex items-center justify-center font-bold"><div class="transition w-2 h-2 rounded-[0.1875rem] bg-[var(--toc-badge-bg)]"></div></div>`;
-                } else {
-                    badge = `<div class="ml-8 transition w-5 h-5 shrink-0 rounded-lg text-xs flex items-center justify-center font-bold"><div class="transition w-1.5 h-1.5 rounded-sm bg-black/5 dark:bg-white/10"></div></div>`;
-                }
-                const indentClass = h.depth === minDepth || h.depth === minDepth + 1 ? 'text-50' : 'text-30';
-                return (
-                    <a href={`#${h.slug}`} class="flex items-center gap-2 px-2 py-1.5 rounded-lg transition hover:bg-[var(--toc-btn-hover)] active:bg-[var(--toc-btn-active)]">
-                        <div innerHTML={badge}></div>
-                        <span class={`text-sm ${indentClass}`}>{removeHash(h.text)}</span>
-                    </a>
-                );
-            }) : <div class="text-center text-sm text-black/50 dark:text-white/50 py-4">暂无目录</div>}
-            </div>
-        </div>
+<table-of-contents class="group">
+    <div id="mobile-toc-inner-wrapper" class="p-3 rounded-xl bg-[var(--toc-bg)] transition-colors">
+    {headings.filter((heading) => heading.depth < minDepth + maxLevel).map((heading) =>
+            <a href={`#${heading.slug}`} class="px-2 flex gap-2 relative transition w-full min-h-9 rounded-lg
+        hover:bg-[var(--toc-btn-hover)] active:bg-[var(--toc-btn-active)] py-2
+    ">
+                <div class:list={["transition w-5 h-5 shrink-0 rounded-lg text-xs flex items-center justify-center font-bold",
+                    {
+                        "bg-[var(--toc-badge-bg)] text-[var(--btn-content)]": heading.depth == minDepth,
+                        "ml-4": heading.depth == minDepth + 1,
+                        "ml-8": heading.depth == minDepth + 2,
+                    }
+                ]}
+                >
+                    {heading.depth == minDepth && heading1Count++}
+                    {heading.depth == minDepth + 1 && <div class="transition w-2 h-2 rounded-[0.1875rem] bg-[var(--toc-badge-bg)]"></div>}
+                    {heading.depth == minDepth + 2 && <div class="transition w-1.5 h-1.5 rounded-sm bg-black/5 dark:bg-white/10"></div>}
+                </div>
+                <div class:list={["transition text-sm", {
+                    "text-50": heading.depth == minDepth || heading.depth == minDepth + 1,
+                    "text-30": heading.depth == minDepth + 2,
+                }]}>{removeTailingHash(heading.text)}</div>
+            </a>
+    )}
+    <div id="mobile-toc-active-indicator" style="opacity: 0" class:list={[{'hidden': headings.length == 0}, "-z-10 absolute bg-[var(--toc-btn-hover)] left-0 right-0 rounded-lg transition-all " +
+        "group-hover:bg-transparent border-2 border-[var(--toc-btn-hover)] group-hover:border-[var(--toc-btn-active)] border-dashed"]}></div>
     </div>
-</div>
+</table-of-contents>
 
 <script>
-    (function() {
-        const tocBtn = document.getElementById('mobile-toc-btn');
-        const tocPanel = document.getElementById('mobile-toc-panel');
-        const tocBackdrop = document.getElementById('mobile-toc-backdrop');
-        const tocClose = document.getElementById('mobile-toc-close');
-        const progressText = document.getElementById('mobile-toc-progress-text');
+class MobileTableOfContents extends HTMLElement {
+    tocEl: HTMLElement | null = null;
+    visibleClass = "visible";
+    observer: IntersectionObserver;
+    anchorNavTarget: HTMLElement | null = null;
+    headingIdxMap = new Map<string, number>();
+    headings: HTMLElement[] = [];
+    sections: HTMLElement[] = [];
+    tocEntries: HTMLAnchorElement[] = [];
+    active: boolean[] = [];
+    activeIndicator: HTMLElement | null = null;
 
-        if (!tocBtn || !tocPanel || !tocBackdrop) return;
+    constructor() {
+        super();
+        this.observer = new IntersectionObserver(
+            this.markVisibleSection, { threshold: 0 }
+        );
+    };
 
-        function openToc() {
-            tocPanel.style.transform = 'translateY(0)';
-            tocPanel.style.opacity = '1';
-            tocBackdrop.classList.remove('hidden');
-            setTimeout(() => {
-                tocBackdrop.style.opacity = '1';
-            }, 10);
+    markVisibleSection = (entries: IntersectionObserverEntry[]) => {
+        entries.forEach((entry) => {
+            const id = entry.target.children[0]?.getAttribute("id");
+            const idx = id ? this.headingIdxMap.get(id) : undefined;
+            if (idx != undefined)
+                this.active[idx] = entry.isIntersecting;
+
+            if (entry.isIntersecting && this.anchorNavTarget == entry.target.firstChild)
+                this.anchorNavTarget = null;
+        });
+
+        if (!this.active.includes(true))
+            this.fallback();
+        this.update();
+    };
+
+    toggleActiveHeading = () => {
+        let i = this.active.length - 1;
+        let min = this.active.length - 1, max = -1;
+        while (i >= 0 && !this.active[i]) {
+            this.tocEntries[i].classList.remove(this.visibleClass);
+            i--;
         }
-
-        function closeToc() {
-            tocPanel.style.transform = 'translateY(10px)';
-            tocPanel.style.opacity = '0';
-            tocBackdrop.style.opacity = '0';
-            setTimeout(() => {
-                tocBackdrop.classList.add('hidden');
-            }, 300);
+        while (i >= 0 && this.active[i]) {
+            this.tocEntries[i].classList.add(this.visibleClass);
+            min = Math.min(min, i);
+            max = Math.max(max, i);
+            i--;
         }
+        while (i >= 0) {
+            this.tocEntries[i].classList.remove(this.visibleClass);
+            i--;
+        }
+        if (min > max) {
+            this.activeIndicator?.setAttribute("style", `opacity: 0`);
+        } else {
+            let parentOffset = this.tocEl?.getBoundingClientRect().top || 0;
+            let scrollOffset = this.tocEl?.scrollTop || 0;
+            let top = this.tocEntries[min].getBoundingClientRect().top - parentOffset + scrollOffset;
+            let bottom = this.tocEntries[max].getBoundingClientRect().bottom - parentOffset + scrollOffset;
+            this.activeIndicator?.setAttribute("style", `top: ${top}px; height: ${bottom - top}px`);
+        }
+    };
 
-        tocBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (tocPanel.style.opacity === '1') {
-                closeToc();
+    scrollToActiveHeading = () => {
+        if (this.anchorNavTarget || !this.tocEl) return;
+        const activeHeading =
+            document.querySelectorAll<HTMLDivElement>(`#mobile-toc .${this.visibleClass}`);
+        if (!activeHeading.length) return;
+
+        const topmost = activeHeading[0];
+        const bottommost = activeHeading[activeHeading.length - 1];
+        const tocHeight = this.tocEl.clientHeight;
+
+        let top;
+        if (bottommost.getBoundingClientRect().bottom -
+            topmost.getBoundingClientRect().top < 0.9 * tocHeight)
+            top = topmost.offsetTop - 32;
+        else
+            top = bottommost.offsetTop - tocHeight * 0.8;
+
+        this.tocEl.scrollTo({
+            top,
+            left: 0,
+            behavior: "smooth",
+        });
+    };
+
+    update = () => {
+        requestAnimationFrame(() => {
+            this.toggleActiveHeading();
+            this.scrollToActiveHeading();
+        });
+    };
+
+    fallback = () => {
+        if (!this.sections.length) return;
+
+        for (let i = 0; i < this.sections.length; i++) {
+            let offsetTop = this.sections[i].getBoundingClientRect().top;
+            let offsetBottom = this.sections[i].getBoundingClientRect().bottom;
+
+            if (this.isInRange(offsetTop, 0, window.innerHeight)
+                || this.isInRange(offsetBottom, 0, window.innerHeight)
+                || (offsetTop < 0 && offsetBottom > window.innerHeight)) {
+                this.markActiveHeading(i);
+            }
+            else if (offsetTop > window.innerHeight) break;
+        }
+    };
+
+    markActiveHeading = (idx: number)=> {
+        this.active[idx] = true;
+    };
+
+    handleAnchorClick = (event: Event) => {
+        const anchor = event
+            .composedPath()
+            .find((element) => element instanceof HTMLAnchorElement);
+
+        if (anchor) {
+            const id = decodeURIComponent(anchor.hash?.substring(1));
+            const idx = this.headingIdxMap.get(id);
+            if (idx !== undefined) {
+                this.anchorNavTarget = this.headings[idx];
             } else {
-                openToc();
+                this.anchorNavTarget = null;
             }
-        });
-
-        tocClose?.addEventListener('click', closeToc);
-        tocBackdrop?.addEventListener('click', closeToc);
-
-        tocPanel?.addEventListener('click', (e) => {
-            if ((e.target as HTMLElement).closest('a[href^="#"]')) {
-                setTimeout(closeToc, 150);
-            }
-        });
-
-        function updateProgress() {
-            if (!progressText) return;
-            const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
-            const docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-            const progress = docHeight > 0 ? Math.round((scrollTop / docHeight) * 100) : 0;
-            progressText.textContent = progress + '%';
         }
+    };
 
-        window.addEventListener('scroll', updateProgress, { passive: true });
-        updateProgress();
+    isInRange(value: number, min: number, max: number) {
+        return min < value && value < max;
+    };
 
-        window.swup?.hooks?.on('page:view', () => {
-            updateProgress();
-            closeToc();
+    connectedCallback() {
+        const element = document.querySelector('.prose');
+        if (element) {
+            element.addEventListener('animationend', () => {
+                this.init();
+            }, { once: true });
+        } else {
+            console.debug('Animation element not found');
+        }
+    };
+
+    init() {
+        this.tocEl = document.getElementById(
+            "mobile-toc-inner-wrapper"
+        );
+
+        if (!this.tocEl) return;
+
+        this.tocEl.addEventListener("click", this.handleAnchorClick, {
+            capture: true,
         });
 
-        window.addEventListener('popstate', closeToc);
+        this.activeIndicator = document.getElementById("mobile-toc-active-indicator");
 
-        // Initial state
-        tocPanel.style.transform = 'translateY(10px)';
-        tocPanel.style.opacity = '0';
-    })();
+        this.tocEntries = Array.from(
+            document.querySelectorAll<HTMLAnchorElement>("#mobile-toc a[href^='#']")
+        );
+
+        if (this.tocEntries.length === 0) return;
+
+        this.sections = new Array(this.tocEntries.length);
+        this.headings = new Array(this.tocEntries.length);
+        for (let i = 0; i < this.tocEntries.length; i++) {
+            const id = decodeURIComponent(this.tocEntries[i].hash?.substring(1));
+            const heading = document.getElementById(id);
+            const section = heading?.parentElement;
+            if (heading instanceof HTMLElement && section instanceof HTMLElement) {
+                this.headings[i] = heading;
+                this.sections[i] = section;
+                this.headingIdxMap.set(id, i);
+            }
+        }
+        this.active = new Array(this.tocEntries.length).fill(false);
+
+        this.sections.forEach((section) =>
+            this.observer.observe(section)
+        );
+
+        this.fallback();
+        this.update();
+    };
+
+    disconnectedCallback() {
+        this.sections.forEach((section) =>
+            this.observer.unobserve(section)
+        );
+        this.observer.disconnect();
+        this.tocEl?.removeEventListener("click", this.handleAnchorClick);
+    };
+
+    reset() {
+        if (this.observer) {
+            this.sections.forEach((section) =>
+                this.observer.unobserve(section)
+            );
+            this.observer.disconnect();
+        }
+        this.tocEntries = [];
+        this.sections = [];
+        this.headings = [];
+        this.active = [];
+        this.headingIdxMap.clear();
+        this.activeIndicator = null;
+        this.anchorNavTarget = null;
+    }
+}
+
+if (!customElements.get("mobile-table-of-contents")) {
+    customElements.define("mobile-table-of-contents", MobileTableOfContents);
+}
 </script>
