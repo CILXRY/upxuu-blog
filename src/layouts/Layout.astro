@@ -646,4 +646,69 @@ if (window.swup) {
 } else {
 	document.addEventListener("swup:enable", setup)
 }
+
+// Mobile TOC interactions
+(function() {
+    const tocBtn = document.getElementById('mobile-toc-btn');
+    const tocPanel = document.getElementById('mobile-toc-panel');
+    const tocBackdrop = document.getElementById('mobile-toc-backdrop');
+    const tocClose = document.getElementById('mobile-toc-close');
+    const progressText = document.getElementById('mobile-toc-progress-text');
+
+    if (!tocBtn || !tocPanel || !tocBackdrop) return;
+
+    function openToc() {
+        tocPanel.style.transform = 'translateY(0)';
+        tocBackdrop.classList.remove('hidden');
+        setTimeout(() => {
+            tocBackdrop.style.opacity = '1';
+        }, 10);
+    }
+
+    function closeToc() {
+        tocPanel.style.transform = 'translateY(100%)';
+        tocBackdrop.style.opacity = '0';
+        setTimeout(() => {
+            tocBackdrop.classList.add('hidden');
+        }, 300);
+    }
+
+    tocBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (tocPanel.style.transform === 'translateY(0px)') {
+            closeToc();
+        } else {
+            openToc();
+        }
+    });
+
+    tocClose?.addEventListener('click', closeToc);
+    tocBackdrop?.addEventListener('click', closeToc);
+
+    // Close panel when clicking a TOC link
+    tocPanel?.addEventListener('click', (e) => {
+        if ((e.target as HTMLElement).closest('a[href^="#"]')) {
+            setTimeout(closeToc, 150);
+        }
+    });
+
+    function updateProgress() {
+        if (!progressText) return;
+        const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+        const docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        const progress = docHeight > 0 ? Math.round((scrollTop / docHeight) * 100) : 0;
+        progressText.textContent = progress + '%';
+    }
+
+    window.addEventListener('scroll', updateProgress, { passive: true });
+    updateProgress();
+
+    // Update progress on page change
+    window.swup?.hooks?.on('page:view', () => {
+        updateProgress();
+    });
+
+    // Handle back button
+    window.addEventListener('popstate', closeToc);
+})();
 </script>

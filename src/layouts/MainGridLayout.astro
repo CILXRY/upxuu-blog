@@ -4,6 +4,7 @@ import Footer from "@components/Footer.astro";
 import Navbar from "@components/Navbar.astro";
 import SideBar from "@components/widget/SideBar.astro";
 import WelcomeToast from "@components/WelcomeToast.astro";
+import MobileToc from "../components/widget/MobileToc.astro";
 import type { MarkdownHeading } from "astro";
 import { Icon } from "astro-icon/components";
 import ImageWrapper from "../components/misc/ImageWrapper.astro";
@@ -100,6 +101,7 @@ const mainPanelTop = siteConfig.banner.enable
 
         <BackToTop></BackToTop>
         <WelcomeToast></WelcomeToast>
+        {siteConfig.toc.enable && <MobileToc headings={headings}></MobileToc>}
     </div>
 </div>
 

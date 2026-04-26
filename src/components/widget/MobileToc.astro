@@ -1,0 +1,86 @@
+---
+import type { MarkdownHeading } from "astro";
+
+interface Props {
+    headings?: MarkdownHeading[];
+}
+
+const { headings = [] } = Astro.props;
+---
+
+<button id="mobile-toc-btn" class="fixed bottom-5 right-5 w-12 h-12 rounded-full bg-[var(--primary)] text-white font-bold text-xs shadow-lg flex items-center justify-center lg:hidden z-[60] active:scale-90 transition-transform">
+    <span id="mobile-toc-progress-text">0%</span>
+</button>
+
+<div id="mobile-toc-backdrop" class="fixed inset-0 bg-black/50 z-[70] hidden opacity-0 transition-opacity duration-300 lg:hidden"></div>
+
+<div id="mobile-toc-panel" class="fixed bottom-0 left-0 right-0 bg-[var(--card-bg)] rounded-t-2xl z-[80] lg:hidden transform translate-y-full transition-transform duration-300">
+    <div class="flex items-center justify-between px-4 py-3 border-b border-[var(--line-color)]">
+        <span class="font-bold text-lg">目录</span>
+        <button id="mobile-toc-close" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[var(--toc-btn-hover)] active:bg-[var(--toc-btn-active)] transition">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+    </div>
+    <div class="p-3 max-h-[60vh] overflow-y-auto">
+        <mobile-toc-content data-headings={JSON.stringify(headings)}></mobile-toc-content>
+    </div>
+</div>
+
+<script>
+    class MobileTocContent extends HTMLElement {
+        connectedCallback() {
+            try {
+                const headings = JSON.parse(this.dataset.headings || '[]');
+                if (headings.length === 0) {
+                    this.innerHTML = '<div class="text-center text-sm text-black/50 dark:text-white/50 py-4">暂无目录</div>';
+                    return;
+                }
+
+                let minDepth = 10;
+                for (const h of headings) {
+                    minDepth = Math.min(minDepth, h.depth);
+                }
+
+                const maxLevel = 3;
+                let heading1Count = 0;
+
+                const removeHash = (text) => {
+                    const i = text.lastIndexOf('#');
+                    return i === text.length - 1 ? text.substring(0, i) : text;
+                };
+
+                let html = '<div class="space-y-1">';
+                for (const h of headings) {
+                    if (h.depth >= minDepth + maxLevel) continue;
+
+                    let badge = '';
+                    if (h.depth === minDepth) {
+                        heading1Count++;
+                        badge = `<div class="transition w-5 h-5 shrink-0 rounded-lg text-xs flex items-center justify-center font-bold bg-[var(--toc-badge-bg)] text-[var(--btn-content)]">${heading1Count}</div>`;
+                    } else if (h.depth === minDepth + 1) {
+                        badge = `<div class="ml-4 transition w-5 h-5 shrink-0 rounded-lg text-xs flex items-center justify-center font-bold"><div class="transition w-2 h-2 rounded-[0.1875rem] bg-[var(--toc-badge-bg)]"></div></div>`;
+                    } else {
+                        badge = `<div class="ml-8 transition w-5 h-5 shrink-0 rounded-lg text-xs flex items-center justify-center font-bold"><div class="transition w-1.5 h-1.5 rounded-sm bg-black/5 dark:bg-white/10"></div></div>`;
+                    }
+
+                    const indentClass = h.depth === minDepth || h.depth === minDepth + 1 ? 'text-50' : 'text-30';
+
+                    html += `
+                        <a href="#${h.slug}" class="flex items-center gap-2 px-2 py-2 rounded-lg transition hover:bg-[var(--toc-btn-hover)] active:bg-[var(--toc-btn-active)]">
+                            ${badge}
+                            <span class="text-sm ${indentClass}">${removeHash(h.text)}</span>
+                        </a>
+                    `;
+                }
+                html += '</div>';
+                this.innerHTML = html;
+            } catch (e) {
+                this.innerHTML = '<div class="text-center text-sm text-black/50 dark:text-white/50 py-4">暂无目录</div>';
+            }
+        }
+    }
+
+    if (!customElements.get('mobile-toc-content')) {
+        customElements.define('mobile-toc-content', MobileTocContent);
+    }
+</script>
